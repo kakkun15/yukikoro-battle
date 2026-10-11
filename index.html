@@ -58,7 +58,12 @@ ol.result li .pc{margin-left:auto;font-variant-numeric:tabular-nums}
 .stick{width:132px;height:132px;flex:none;position:relative;background:var(--night-2);box-shadow:0 0 0 2px var(--line);touch-action:none}
 .stick i{position:absolute;left:50%;top:50%;width:44px;height:44px;margin:-22px 0 0 -22px;background:var(--ice)}
 .tbtns{display:flex;gap:12px}
-.tbtns button{width:84px;height:84px;font-size:15px;touch-action:none}
+.tbtns button{width:88px;height:88px;font-size:14px;line-height:1.2;touch-action:none;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;padding:4px}
+.tbtns canvas{width:40px;height:40px;image-rendering:pixelated;pointer-events:none;background:var(--snow)}
+.tbtns span{pointer-events:none}
+.keyrow{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-top:10px}
+.keyrow button{font-size:14px}
+#keymsg{font-size:14px;color:var(--lamp);margin:6px 0 0;min-height:1.6em}
 .guide{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:22px 32px;border-top:2px dashed var(--line);padding-top:18px}
 .guide h2{font-size:17px;font-weight:400;margin:0 0 8px;color:var(--lamp);letter-spacing:.08em}
 .guide p{margin:0 0 8px;font-size:15px;color:#d5e1f0}
@@ -136,7 +141,7 @@ kbd{font:inherit;font-size:13px;color:var(--ink);background:var(--snow);padding:
 
   <div class="touch" id="touch" hidden>
     <div class="stick" id="stick"><i id="knob"></i></div>
-    <div class="tbtns"><button id="t-a" type="button">手</button><button class="main" id="t-b" type="button">道具</button></div>
+    <div class="tbtns"><button id="t-a" type="button"><canvas id="ti-a" width="10" height="10"></canvas><span id="tl-a">はなす</span></button><button class="main" id="t-b" type="button"><canvas id="ti-b" width="10" height="10"></canvas><span id="tl-b">道具</span></button></div>
   </div>
 
   <section class="guide">
@@ -145,9 +150,15 @@ kbd{font:inherit;font-size:13px;color:var(--ink);background:var(--snow);padding:
       <p>雪玉は新しい雪の上を転がすほど大きくなる。通ったあとは雪が減るので、白いところを探して動く。先に100%まで育てた人の雪玉が雪だるまになって勝ち。3分30秒たったら、その時いちばん大きい人の勝ち。</p>
       <dl>
         <dt><kbd>矢印</kbd> / <kbd>WASD</kbd></dt><dd>移動。雪玉を持っている間は遅く、玉が大きいほど重い。</dd>
-        <dt><kbd>X</kbd> / <kbd>J</kbd></dt><dd>雪玉から手を離す。手ぶらならパンチ（相手を気絶させる）。自分の雪玉に向かって歩くと持ち直す。</dd>
-        <dt><kbd>Space</kbd> / <kbd>Enter</kbd> / <kbd>K</kbd></dt><dd>掘り当てたアイテムを使う。</dd>
+        <dt id="k-a"></dt><dd>雪玉から手を離す。手ぶらならパンチ（相手を気絶させる）。自分の雪玉に向かって歩くと持ち直す。</dd>
+        <dt id="k-b"></dt><dd>アイテムを使う。押している間は届く範囲と狙う相手が出て、離すと使う。</dd>
       </dl>
+      <div class="keyrow">
+        <button class="sm" id="rb-a" type="button">「手」のキーを変える</button>
+        <button class="sm" id="rb-b" type="button">「道具」のキーを変える</button>
+        <button class="sm" id="rb-reset" type="button">初期設定にもどす</button>
+      </div>
+      <p id="keymsg" role="status"></p>
     </div>
     <div>
       <h2>アイテム</h2>
@@ -170,12 +181,12 @@ const $=id=>document.getElementById(id);
 const W=384,H=216,FX0=8,FX1=376,FY0=68,FY1=208,CELL=4,GW=96,GY0=60,GH=39;
 const GOAL=100,MATCH=210,STEP=1/30;
 const SPD_HOLD=46,SPD_FREE=72,TURN=7.5,GROW=0.031,REGEN=24,DIG_P=1/90,DIG_CD=20;
-const HOOK_R=120,BLAST=28,SPOT_R=12,SNAP_MS=50,PFX='yukikoro-v1-';
+const HOOK_R=120,HOOK_A=0.8,BLAST=28,SPOT_R=12,SNAP_MS=50,PFX='yukikoro-v1-';
 const COL=[{m:'#e2504c',d:'#a5302f'},{m:'#3f7fd6',d:'#27529a'},{m:'#eaa92a',d:'#a8700f'},{m:'#3fae6b',d:'#23743f'},{m:'#9a62d8',d:'#6a3aa4'},{m:'#ef7fb0',d:'#b84a80'}];
 const BOTN=['ユキオ','コナ','ツララ','モグ','シロ','ポン'];
 const ITEMS={
   ski:{n:'スキー板',d:'5秒間スピードアップ。転がす速さも上がる。'},
-  hook:{n:'フック',d:'向いている先の相手に引っかける。雪玉を持っていれば相手を引き寄せ、手ぶらなら自分が飛んでいく。'},
+  hook:{n:'フック',d:'向いている先（扇形の範囲）の相手に引っかける。雪玉を持っていれば相手を引き寄せ、手ぶらなら自分が飛んでいく。'},
   toy:{n:'ヘビのおもちゃ',d:'近くの相手を8秒追いかけて、かみつくたびに気絶させる。パンチで壊せる。'},
   bomb:{n:'ばくだん',d:'前に投げる。爆発に巻きこんだ雪玉をけずり、人は気絶。自分も巻きこまれる。'},
   ice:{n:'つらら',d:'自分以外でいちばん大きい雪玉に落ちる。よけられない。'},
@@ -252,6 +263,21 @@ function startSpot(g,p){
   }
   g.spot={id:++g.spotN,by:p.id,t:dur,dur,pts};
 }
+function hookTarget(ps,p,hint){
+  let best=null,bs=1e9;
+  for(const o of ps){
+    if(o.id===p.id)continue;
+    const dx=o.x-p.x,dy=o.y-p.y,d=Math.hypot(dx,dy);if(d>HOOK_R||d<1)continue;
+    const a=Math.abs(angDiff(Math.atan2(dy,dx),p.ang));
+    let s=d*(1+a);if(o===hint)s=-1;else if(a>HOOK_A)continue;
+    if(s<bs){bs=s;best=o;}
+  }
+  return best;
+}
+function bombSpot(p,vx,vy){
+  const th=(p.hold?2*radius(p.size)+5:0)+30;
+  return{x:clamp(p.x+vx*th,FX0,FX1),y:clamp(p.y+vy*th,FY0,FY1)};
+}
 function useItem(g,p,hint){
   const it=p.item;if(!it)return;
   if(it==='spot'&&g.spot)return;
@@ -259,14 +285,7 @@ function useItem(g,p,hint){
   const ux=Math.cos(p.ang),uy=Math.sin(p.ang);
   if(it==='ski')p.boost=5;
   else if(it==='hook'){
-    let best=null,bs=1e9;
-    for(const o of g.players){
-      if(o===p)continue;
-      const dx=o.x-p.x,dy=o.y-p.y,d=Math.hypot(dx,dy);if(d>HOOK_R||d<1)continue;
-      const a=Math.abs(angDiff(Math.atan2(dy,dx),p.ang));
-      let s=d*(1+a);if(o===hint)s=-1;else if(a>0.8)continue;
-      if(s<bs){bs=s;best=o;}
-    }
+    const best=hookTarget(g.players,p,hint);
     if(!best){emit(g,{e:'hook',x1:p.x,y1:p.y,x2:p.x+ux*HOOK_R*0.6,y2:p.y+uy*HOOK_R*0.6});return;}
     const dx=best.x-p.x,dy=best.y-p.y,d=Math.hypot(dx,dy),vx=dx/d,vy=dy/d;
     emit(g,{e:'hook',x1:p.x,y1:p.y,x2:best.x,y2:best.y});
@@ -282,8 +301,8 @@ function useItem(g,p,hint){
   else if(it==='bomb'){
     let vx=ux,vy=uy;
     if(hint){const d=dist(hint.x,hint.y,p.x,p.y)||1;vx=(hint.x-p.x)/d;vy=(hint.y-p.y)/d;}
-    const th=(p.hold?2*radius(p.size)+5:0)+30;
-    g.bombs.push({x:clamp(p.x+vx*th,FX0,FX1),y:clamp(p.y+vy*th,FY0,FY1),sx:p.x,sy:p.y,ft:0.35,fuse:1.4,own:p.id});
+    const q=bombSpot(p,vx,vy);
+    g.bombs.push({x:q.x,y:q.y,sx:p.x,sy:p.y,ft:0.35,fuse:1.4,own:p.id});
   }
   else if(it==='ice'){
     let tg=null;for(const o of g.players)if(o!==p&&(!tg||o.rank<tg.rank))tg=o;
@@ -513,7 +532,9 @@ let scene='title';            // title | lobby | game | result
 let G=null,V=null,me=-1,online=false,isHostUi=true;
 let roster=[],peer=null,hostConn=null,roomCode='',botCount=3;
 let prevS=null,curS=null,curAt=0,evOut=[];
-const inp={mx:0,my:0,a:0,b:0,ca:0,cb:0};
+const inp={mx:0,my:0,a:0,b:0,ca:0,cb:0,aim:false};
+let aimBy=null,aimTxt='';
+const isTouch=!!(window.matchMedia&&window.matchMedia('(pointer:coarse)').matches);
 let muted=false,AC=null;
 
 // ---------------------------------------------------------------- effects
@@ -584,13 +605,15 @@ let S=1,texts=[];
 const R=(x,y,w,h,col)=>{c.fillStyle=col;c.fillRect(Math.round(x),Math.round(y),w,h);};
 function disc(F,cx,cy,r,col){cx=Math.round(cx);cy=Math.round(cy);const m=Math.floor(r);for(let dy=-m;dy<=m;dy++){const w=Math.floor(Math.sqrt(r*r-dy*dy)+0.5);F(cx-w,cy+dy,2*w+1,1,col);}}
 const T=(s,x,y,size,col,al,ol)=>texts.push([s,x,y,size,col,al||'center',ol]);
-const IPAL={r:'#d9534f',k:'#33415c',y:'#f4b860',g:'#3fae6b',d:'#23743f',w:'#ffffff',c:'#7cc4ec',o:'#f08a3c',n:'#8a5a48'};
+const IPAL={r:'#d9534f',k:'#33415c',y:'#f4b860',g:'#3fae6b',d:'#23743f',w:'#ffffff',c:'#7cc4ec',o:'#f08a3c',n:'#8a5a48',s:'#f6d2b0'};
 const ICON={
   ski:['......rr','.....rr.','.r..rr..','rr.rr...','.rrr....','.rr.....','rr......','r.......'],
   hook:['k..kk..k','k..kk..k','.kkkkkk.','...kk...','...kk...','...yy...','..yy....','.yy.....'],
   toy:['..gggg..','.gkggkg.','.gggggg.','..dgg...','...ggd..','..dggg..','.ggg..r.','..gggrr.'],
   bomb:['.....y..','....o...','..kkkn..','.kwkkkk.','.kwkkkk.','.kkkkkk.','.kkkkkk.','..kkkk..'],
   ice:['cccccccc','.cwcccc.','.cwcccc.','..cwcc..','..cwcc..','...cc...','...cc...','...c....'],
+  fist:['.kkkkkk.','kskskskk','kskskssk','kssssssk','kkkkkssk','kssssskk','.kssssk.','..kkkk..'],
+  palm:['.k.k.k..','ksksksk.','ksksksk.','ksksksk.','kssssskk','kssssssk','.kssssk.','..kkkk..'],
   spot:['...yy...','..yyyy..','.kkkkkk.','..y..y..','.y....y.','.y....y.','y......y','yyyyyyyy']
 };
 function icon(F,name,x,y,s){const d=ICON[name];for(let j=0;j<8;j++)for(let i=0;i<8;i++){const ch=d[j][i];if(ch!=='.')F(x+i*s,y+j*s,s,s,IPAL[ch]);}}
@@ -769,6 +792,7 @@ function draw(time){
     [[-1,-1],[1,-1],[-1,1],[1,1]].forEach(d=>{R(p.bx+d[0]*r-1,cy+d[1]*r,3,1,b);R(p.bx+d[0]*r,cy+d[1]*r-1,1,3,b);});
     const iy=cy-r-i.t*130;for(let j=0;j<12;j++){const w=Math.max(0,3-Math.floor(j/3.2));R(p.bx-w,iy-12+j,2*w+1,1,j<2?'#e8f6fd':'#7cc4ec');}R(p.bx-1,iy-11,1,7,'#ffffff');
   }
+  drawAim(P[me],P,time);
   // fx
   for(const l of lines){
     if(l.ring){const rr=(1-l.t/l.m)*BLAST;for(let k=0;k<28;k++){const a=k/28*6.283;R(l.x+Math.cos(a)*rr,l.y+Math.sin(a)*rr,2,2,'#fff3c4');}}
@@ -806,6 +830,33 @@ function draw(time){
     X.fillStyle=t[4];X.fillText(t[0],t[1]*S,t[2]*S);
   }
 }
+function mark(x,y,r,col){[[-1,-1],[1,-1],[-1,1],[1,1]].forEach(d=>{R(x+d[0]*r-1,y+d[1]*r,3,1,col);R(x+d[0]*r,y+d[1]*r-1,1,3,col);});}
+function drawAim(my,P,time){
+  aimTxt='';
+  if(!inp.aim||!my||!my.item||my.stun||V.ph!=='play'||V.startT>0)return;
+  const it=my.item,ux=Math.cos(my.ang),uy=Math.sin(my.ang),bl=Math.floor(time*8)%2?'#d9534f':'#f08a3c',ln='#3c4d6e';
+  const dot=(x,y,col)=>{if(y>=60&&y<H-4)R(x,y,1,1,col);};
+  if(it==='hook'){
+    for(let k=10;k<=HOOK_R;k+=3){dot(my.x+Math.cos(my.ang-HOOK_A)*k,my.y+Math.sin(my.ang-HOOK_A)*k,ln);dot(my.x+Math.cos(my.ang+HOOK_A)*k,my.y+Math.sin(my.ang+HOOK_A)*k,ln);}
+    for(let a=-HOOK_A;a<=HOOK_A;a+=0.03)dot(my.x+Math.cos(my.ang+a)*HOOK_R,my.y+Math.sin(my.ang+a)*HOOK_R,ln);
+    const t=hookTarget(P,my,null);
+    if(t){
+      const n=Math.ceil(dist(my.x,my.y,t.x,t.y)/4);for(let k=1;k<n;k++)dot(lerp(my.x,t.x,k/n),lerp(my.y,t.y,k/n)-4,bl);
+      mark(t.x,t.y-5,8,bl);aimTxt=my.hold?'離すと '+t.name+' を引き寄せる':'離すと '+t.name+' に飛びつく';
+    }else aimTxt='範囲の中に相手がいない（離すと空振り）';
+  }else if(it==='bomb'){
+    const q=bombSpot(my,ux,uy);
+    for(let k=0;k<32;k++){const a=k/32*6.283;dot(q.x+Math.cos(a)*BLAST,q.y+Math.sin(a)*BLAST,k%2?bl:ln);}
+    R(q.x-2,q.y,5,1,bl);R(q.x,q.y-2,1,5,bl);aimTxt='離すと × に投げる（円の中が爆発）';
+  }else if(it==='toy'){
+    let t=null,bd=1e9;for(const o of P)if(o.id!==my.id&&!o.stun){const d=dist(o.x,o.y,my.x,my.y);if(d<bd){bd=d;t=o;}}
+    if(t){mark(t.x,t.y-5,8,bl);aimTxt='離すと '+t.name+' を追いかける';}else aimTxt='離すと おもちゃを放す';
+  }else if(it==='ice'){
+    let t=null;for(const o of P)if(o.id!==my.id&&(!t||o.rank<t.rank))t=o;
+    if(t){const r=radius(t.size)+3;mark(t.bx,t.by-r*0.5,r,bl);aimTxt='離すと '+t.name+' の雪玉に落ちる';}
+  }else if(it==='spot'){const o=P.length-1;aimTxt=V.spot?'いまは使えない（光が出ている）':'離すと 光が '+(o>=2?o-1:1)+' つ出る';}
+  else aimTxt='離すと 5秒間スピードアップ';
+}
 function drawHud(time){
   const P=V.players,n=P.length,cw=Math.min(66,Math.floor((W-40)/n)),bw=cw-31,my=P[me];
   P.forEach((p,i)=>{
@@ -820,10 +871,11 @@ function drawHud(time){
   const tl=Math.max(0,Math.ceil(V.tl));T(Math.floor(tl/60)+':'+String(tl%60).padStart(2,'0'),W-4,11,8,tl<=20?'#d9534f':'#22304a','right');
   if(my){
     const bx=4,by=H-27;R(bx,by,22,22,'#22304a');R(bx+1,by+1,20,20,'#f3f7fb');
-    if(my.item){icon(R,my.item,bx+3,by+3,2);T(ITEMS[my.item].n,bx+26,by+10,7,'#22304a','left','#ffffff');T('Space で使う',bx+26,by+19,6,'#4a5f85','left','#ffffff');}
+    if(my.item){icon(R,my.item,bx+3,by+3,2);T(ITEMS[my.item].n,bx+26,by+10,7,'#22304a','left','#ffffff');if(!aimTxt)T(isTouch?'道具ボタン 長押しで狙う':keyName(KEYS.b[0])+' 長押しで狙う・離して使う',bx+26,by+19,6,'#4a5f85','left','#ffffff');}
     else if(my.cd>0){const h=Math.round(20*my.cd/DIG_CD);R(bx+1,by+21-h,20,h,'#c5d5e8');T(String(Math.ceil(my.cd)),bx+11,by+15,9,'#4a5f85','center');T('次の発掘まで',bx+26,by+14,6,'#4a5f85','left','#ffffff');}
     else{if(Math.floor(time*3)%2)R(bx+9,by+9,4,4,'#f4b860');T('転がして掘り当てろ',bx+26,by+14,6,'#4a5f85','left','#ffffff');}
-    if(!my.hold&&!my.stun&&V.ph==='play'&&V.startT<=0)T('X でパンチ ／ 雪玉に向かって歩くと持つ',W/2,H-6,6,'#22304a','center','#ffffff');
+    if(aimTxt)T(aimTxt,W/2,H-6,7,'#a5302f','center','#ffffff');
+    else if(!my.hold&&!my.stun&&V.ph==='play'&&V.startT<=0)T((isTouch?'手ボタン':keyName(KEYS.a[0]))+' でパンチ ／ 雪玉に向かって歩くと持つ',W/2,H-6,6,'#22304a','center','#ffffff');
   }
   if(V.startT>0)T(String(Math.ceil(V.startT)),W/2,118,40,'#22304a','center','#ffffff');
   if(V.spot){
@@ -908,12 +960,22 @@ function simTick(){
   if(role==='host'&&G.ph==='end'&&scene==='game'&&G.t>G.endT+2.5)showResult();
   if(role==='demo'&&G.ph==='end'&&G.t>G.endT+5)startDemo();
 }
+let tbState='';
+function updTouch(){
+  if(!isTouch)return;
+  const my=V&&role!=='demo'?V.players[me]:null,st=(my&&!my.hold?'p':'h')+'|'+(my&&my.item||'');
+  if(st===tbState)return;tbState=st;
+  const face=(id,name)=>{const x=$(id).getContext('2d');x.clearRect(0,0,10,10);if(name)icon((px,py,w,h,col)=>{x.fillStyle=col;x.fillRect(px,py,w,h);},name,1,1,1);};
+  const free=my&&!my.hold;
+  face('ti-a',free?'fist':'palm');$('tl-a').textContent=free?'パンチ':'はなす';
+  face('ti-b',my&&my.item?my.item:null);$('tl-b').textContent=my&&my.item?ITEMS[my.item].n:'道具';
+}
 function frame(now){
   requestAnimationFrame(frame);
   const dt=Math.min(0.1,(now-lastF)/1000);lastF=now;
   if(role==='client'&&curS&&V){buildView(now);regen(V.snow,dt,V.players.length);for(const p of V.players)if(p.hold)sweep(V.snow,p.bx,p.by,radius(p.size));}
   if(!V)return;
-  updFx(dt);draw(now/1000);
+  updFx(dt);draw(now/1000);updTouch();
 }
 function startDemo(){
   role='demo';me=-1;
@@ -1086,21 +1148,64 @@ function readKeys(){
   if(keys.ArrowLeft||keys.KeyA)mx-=1;if(keys.ArrowRight||keys.KeyD)mx+=1;if(keys.ArrowUp||keys.KeyW)my-=1;if(keys.ArrowDown||keys.KeyS)my+=1;
   inp.mx=mx;inp.my=my;
 }
-const GAMEKEYS=['ArrowLeft','ArrowRight','ArrowUp','ArrowDown','Space','Enter','KeyX','KeyJ','KeyK','KeyW','KeyA','KeyS','KeyD','KeyZ'];
+const DEFK={a:['KeyX','KeyF'],b:['Space','KeyE','Enter']};
+const MOVE=['ArrowLeft','ArrowRight','ArrowUp','ArrowDown','KeyW','KeyA','KeyS','KeyD'];
+let KEYS={a:DEFK.a.slice(),b:DEFK.b.slice()},rebind=null;
+try{const k=JSON.parse(localStorage.getItem('yk-keys'));if(k&&Array.isArray(k.a)&&Array.isArray(k.b)&&k.a.length&&k.b.length)KEYS={a:k.a.slice(0,3).map(String),b:k.b.slice(0,3).map(String)};}catch(_){}
+function keyName(c){
+  let m;
+  if((m=/^Key(.)$/.exec(c)))return m[1];
+  if((m=/^Digit(.)$/.exec(c)))return m[1];
+  if((m=/^Numpad(.+)$/.exec(c)))return'テンキー'+m[1];
+  if((m=/^(Shift|Control|Alt|Meta)(Left|Right)$/.exec(c)))return(m[2]==='Left'?'左':'右')+({Shift:'Shift',Control:'Ctrl',Alt:'Alt',Meta:'Win'})[m[1]];
+  return c;
+}
+function renderKeys(){
+  for(const act of['a','b']){
+    const dt=$('k-'+act);dt.textContent='';
+    KEYS[act].forEach((k,i)=>{if(i)dt.append(' / ');const kb=document.createElement('kbd');kb.textContent=keyName(k);dt.append(kb);});
+    dt.append(' / ');const mk=document.createElement('kbd');mk.textContent=act==='a'?'左クリック':'右クリック';dt.append(mk);
+    $('rb-'+act).textContent=rebind===act?'キーを押して…（Escでやめる）':'「'+(act==='a'?'手':'道具')+'」のキーを変える';
+  }
+}
+function saveKeys(){try{localStorage.setItem('yk-keys',JSON.stringify(KEYS));}catch(_){}}
+function aimStart(src){if(!inp.aim){inp.aim=true;aimBy=src;}}
+function aimEnd(src,fire){if(!inp.aim||(src&&aimBy!==src))return;inp.aim=false;aimBy=null;if(fire)pressB();}
+$('rb-a').onclick=()=>{rebind=rebind==='a'?null:'a';$('keymsg').textContent='';renderKeys();};
+$('rb-b').onclick=()=>{rebind=rebind==='b'?null:'b';$('keymsg').textContent='';renderKeys();};
+$('rb-reset').onclick=()=>{KEYS={a:DEFK.a.slice(),b:DEFK.b.slice()};rebind=null;saveKeys();$('keymsg').textContent='初期設定にもどした。';renderKeys();};
 window.addEventListener('keydown',e=>{
+  if(rebind){
+    e.preventDefault();
+    if(e.code==='Escape'){rebind=null;renderKeys();return;}
+    if(MOVE.includes(e.code)){$('keymsg').textContent='移動に使うキーは選べない。ほかのキーを押してね。';return;}
+    const other=rebind==='a'?'b':'a';
+    KEYS[rebind]=[e.code];KEYS[other]=KEYS[other].filter(k=>k!==e.code);
+    if(!KEYS[other].length)KEYS[other]=DEFK[other].filter(k=>k!==e.code);
+    $('keymsg').textContent='「'+(rebind==='a'?'手':'道具')+'」を '+keyName(e.code)+' にした。';
+    rebind=null;saveKeys();renderKeys();return;
+  }
   const tg=e.target&&e.target.tagName;if(tg==='INPUT'||tg==='TEXTAREA')return;
   if(scene!=='game'&&scene!=='ending')return;
-  if(GAMEKEYS.includes(e.code))e.preventDefault();
+  const isA=KEYS.a.includes(e.code),isB=KEYS.b.includes(e.code);
+  if(isA||isB||MOVE.includes(e.code))e.preventDefault();
   if(e.repeat)return;
   keys[e.code]=true;readKeys();
-  if(e.code==='KeyX'||e.code==='KeyJ')pressA();
-  if(e.code==='Space'||e.code==='Enter'||e.code==='KeyK'||e.code==='KeyZ')pressB();
+  if(isA)pressA();
+  if(isB)aimStart(e.code);
 });
-window.addEventListener('keyup',e=>{keys[e.code]=false;readKeys();});
+window.addEventListener('keyup',e=>{keys[e.code]=false;readKeys();aimEnd(e.code,scene==='game');});
 window.addEventListener('pagehide',()=>{try{if(peer)peer.destroy();}catch(_){}});
-window.addEventListener('blur',()=>{for(const k in keys)keys[k]=false;readKeys();});
+window.addEventListener('blur',()=>{for(const k in keys)keys[k]=false;readKeys();aimEnd(null,false);});
+// mouse: left = hand, right = item (hold to aim)
+cv.addEventListener('pointerdown',e=>{
+  if(e.pointerType!=='mouse'||scene!=='game')return;
+  if(e.button===0)pressA();else if(e.button===2)aimStart('mouse');
+});
+window.addEventListener('pointerup',e=>{if(e.pointerType==='mouse'&&e.button===2)aimEnd('mouse',scene==='game');});
+cv.addEventListener('contextmenu',e=>{if(scene==='game'||scene==='ending')e.preventDefault();});
 // touch
-if(window.matchMedia&&window.matchMedia('(pointer:coarse)').matches){
+if(isTouch){
   $('touch').hidden=false;
   const st=$('stick'),kn=$('knob');let pid=null;
   const mv=e=>{const r=st.getBoundingClientRect();let x=(e.clientX-r.left-r.width/2)/(r.width/2),y=(e.clientY-r.top-r.height/2)/(r.height/2);const l=Math.hypot(x,y);if(l>1){x/=l;y/=l;}inp.mx=l<0.2?0:x;inp.my=l<0.2?0:y;kn.style.transform='translate('+x*44+'px,'+y*44+'px)';};
@@ -1109,7 +1214,11 @@ if(window.matchMedia&&window.matchMedia('(pointer:coarse)').matches){
   st.addEventListener('pointermove',e=>{if(e.pointerId===pid)mv(e);});
   st.addEventListener('pointerup',end);st.addEventListener('pointercancel',end);
   $('t-a').addEventListener('pointerdown',e=>{pressA();e.preventDefault();});
-  $('t-b').addEventListener('pointerdown',e=>{pressB();e.preventDefault();});
+  const tb=$('t-b');
+  tb.addEventListener('pointerdown',e=>{try{tb.setPointerCapture(e.pointerId);}catch(_){}aimStart('touch');e.preventDefault();});
+  tb.addEventListener('pointerup',()=>aimEnd('touch',scene==='game'));
+  tb.addEventListener('pointercancel',()=>aimEnd('touch',false));
+  tb.addEventListener('contextmenu',e=>e.preventDefault());
 }
 
 // ---------------------------------------------------------------- boot
@@ -1120,7 +1229,7 @@ for(const k in ITEMS){
   ic.width=ic.height=10;const ix=ic.getContext('2d');icon((x,y,w,h,col)=>{ix.fillStyle=col;ix.fillRect(x,y,w,h);},k,1,1,1);
   dt.append(ic,ITEMS[k].n);dd.textContent=ITEMS[k].d;il.append(dt,dd);
 }
-drawBg();startDemo();
+renderKeys();drawBg();startDemo();
 for(let i=0;i<900;i++)step(G,STEP);G.ev.length=0;G.spot=null;   // open on a match already in progress
 resize();window.addEventListener('resize',resize);
 if(window.ResizeObserver)new ResizeObserver(resize).observe(cv);
