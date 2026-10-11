@@ -42,6 +42,10 @@ button.main:hover{background:#ffd08a}
 button.sm{padding:2px 10px;box-shadow:2px 2px 0 var(--ink)}
 button:focus-visible,input:focus-visible{outline:3px solid var(--berry);outline-offset:2px}
 button[disabled]{opacity:.5;cursor:default}
+.modes button[aria-pressed="true"]{background:var(--ink);color:var(--snow);opacity:1}
+.modes .lbl{font-size:14px}
+.modedesc{font-size:13px;line-height:1.5;color:#4a5f85;margin:-4px 0 0}
+.guide b{font-weight:400;color:var(--snow);border-bottom:2px solid var(--lamp)}
 .bar button{color:var(--snow);background:transparent;border-color:var(--line);box-shadow:none;padding:2px 10px;font-size:14px}
 .bar button:hover{background:var(--night-2)}
 .stack{display:flex;flex-direction:column;gap:8px}
@@ -99,6 +103,8 @@ kbd{font:inherit;font-size:13px;color:var(--ink);background:var(--snow);padding:
       <div class="card">
         <div class="logo">ゆきころバトル<small>妨害あり・2〜6人の雪玉レース</small></div>
         <div class="row"><label for="name">なまえ</label><div class="grow"><input type="text" id="name" maxlength="8" autocomplete="off" placeholder="プレイヤー"></div></div>
+        <div class="row modes" role="group" aria-label="モード"><span class="lbl">モード</span><button class="sm" id="m-t0" type="button">雪原</button><button class="sm" id="m-t1" type="button">坂道</button></div>
+        <p class="modedesc" id="md-t"></p>
         <div class="stack">
           <button class="main" id="b-solo" type="button">ひとりで遊ぶ（ボット3体）</button>
           <button id="b-host" type="button">部屋を作る</button>
@@ -117,6 +123,8 @@ kbd{font:inherit;font-size:13px;color:var(--ink);background:var(--snow);padding:
         <div class="roomcode" id="lobbycode">----</div>
         <div class="row" id="copyrow"><button class="sm" id="b-copy" type="button">コードをコピー</button><span id="copied" style="font-size:13px"></span></div>
         <ul class="members" id="members"></ul>
+        <div class="row modes" role="group" aria-label="モード"><span class="lbl">モード</span><button class="sm" id="m-l0" type="button">雪原</button><button class="sm" id="m-l1" type="button">坂道</button></div>
+        <p class="modedesc" id="md-l"></p>
         <div class="row" id="botrow"><span style="font-size:14px">ボット</span><button class="sm" id="b-botm" type="button" aria-label="ボットを減らす">−</button><span id="botn">0</span><button class="sm" id="b-botp" type="button" aria-label="ボットを増やす">＋</button></div>
         <div class="row">
           <button class="main grow" id="b-start" type="button">はじめる</button>
@@ -147,7 +155,9 @@ kbd{font:inherit;font-size:13px;color:var(--ink);background:var(--snow);padding:
   <section class="guide">
     <div>
       <h2>あそびかた</h2>
-      <p>雪玉は新しい雪の上を転がすほど大きくなる。通ったあとは雪が減るので、白いところを探して動く。先に100%まで育てた人の雪玉が雪だるまになって勝ち。3分30秒たったら、その時いちばん大きい人の勝ち。</p>
+      <p><b>雪原モード</b>　雪玉は新しい雪の上を転がすほど大きくなる。通ったあとは雪が減るので、白いところを探して動く。先に100%まで育てた人の勝ち。3分30秒で時間切れ。</p>
+      <p><b>坂道モード</b>　画面の上が坂の上。雪は下ほど深いので下で育てて、頂上の旗まで押し上げる。届けた大きさが自分の雪だるまに足されて、合計100%で勝ち。4分で時間切れ。手を離した雪玉は坂を転がり落ちて、当たった人を気絶させる。丸太の柵の上では止まる。</p>
+      <p>気絶すると頭の上にバーが出る。長いほど長く動けない。</p>
       <dl>
         <dt><kbd>矢印</kbd> / <kbd>WASD</kbd></dt><dd>移動。雪玉を持っている間は遅く、玉が大きいほど重い。</dd>
         <dt id="k-a"></dt><dd>雪玉から手を離す。手ぶらならパンチ（相手を気絶させる）。自分の雪玉に向かって歩くと持ち直す。</dd>
@@ -179,9 +189,12 @@ kbd{font:inherit;font-size:13px;color:var(--ink);background:var(--snow);padding:
 const $=id=>document.getElementById(id);
 // ---------------------------------------------------------------- constants
 const W=384,H=216,FX0=8,FX1=376,FY0=68,FY1=208,CELL=4,GW=96,GY0=60,GH=39;
-const GOAL=100,MATCH=210,STEP=1/30;
+const GOAL=100,MATCH=210,MATCH_S=240,STEP=1/30;
 const SPD_HOLD=46,SPD_FREE=72,TURN=7.5,GROW=0.031,REGEN=24,DIG_P=1/90,DIG_CD=20;
-const HOOK_R=120,HOOK_A=0.8,BLAST=28,SPOT_R=12,SNAP_MS=50,PFX='yukikoro-v1-';
+const HOOK_R=120,HOOK_A=0.8,BLAST=28,SPOT_R=12,SNAP_MS=50,PFX='yukikoro-v2-';
+const GOAL_Y=FY0+12,ROLL_ACC=95,ROLL_MAX=125,SPOT_CD=25,STUN_PX=4,GROW_S=1.0;
+const LEDGES=[{x0:40,x1:100,y:150},{x0:162,x1:222,y:120},{x0:284,x1:344,y:150}];
+const MODES=[{n:'雪原',d:'その場で育てて、先に100%にした人の勝ち。'},{n:'坂道',d:'下で育てて頂上の旗まで運ぶ。届けた分だけ雪だるまが育つ。'}];
 const COL=[{m:'#e2504c',d:'#a5302f'},{m:'#3f7fd6',d:'#27529a'},{m:'#eaa92a',d:'#a8700f'},{m:'#3fae6b',d:'#23743f'},{m:'#9a62d8',d:'#6a3aa4'},{m:'#ef7fb0',d:'#b84a80'}];
 const BOTN=['ユキオ','コナ','ツララ','モグ','シロ','ポン'];
 const ITEMS={
@@ -190,7 +203,7 @@ const ITEMS={
   toy:{n:'ヘビのおもちゃ',d:'近くの相手を8秒追いかけて、かみつくたびに気絶させる。パンチで壊せる。'},
   bomb:{n:'ばくだん',d:'前に投げる。爆発に巻きこんだ雪玉をけずり、人は気絶。自分も巻きこまれる。'},
   ice:{n:'つらら',d:'自分以外でいちばん大きい雪玉に落ちる。よけられない。'},
-  spot:{n:'スポットライト',d:'下位だけが掘れる。自分以外の人数より1つ少ない光が出て、入れなかった人は長く気絶。光は1人用。'}
+  spot:{n:'スポットライト',d:'下位だけが掘れる。暗くなったら光の中へ。光は1人用で、入っている人の色になる。使った人には専用の光がついてくる。入れなかった人には雷が落ちる。'}
 };
 const clamp=(v,a,b)=>v<a?a:v>b?b:v, lerp=(a,b,t)=>a+(b-a)*t, rnd=(a,b)=>a+Math.random()*(b-a);
 const angDiff=(a,b)=>{let d=(a-b)%(Math.PI*2);if(d>Math.PI)d-=Math.PI*2;if(d<-Math.PI)d+=Math.PI*2;return d};
@@ -199,14 +212,14 @@ const dist=(ax,ay,bx,by)=>Math.hypot(ax-bx,ay-by);
 
 // ---------------------------------------------------------------- simulation (host only)
 function newAI(){return{t:0,gx:0,gy:0,useT:-1,raid:0,raidT:-1,raidCd:rnd(6,14),sp:-1,spId:-1,rest:0,restCd:rnd(4,9)}}
-function newGame(list){
-  const n=list.length;
-  const g={t:0,tl:MATCH,ph:'play',win:-1,startT:3,endT:0,players:[],toys:[],bombs:[],skiers:[],ices:[],spot:null,spotN:0,
+function newGame(list,mode){
+  const n=list.length,slope=mode===1;
+  const g={t:0,mode:slope?1:0,tl:slope?MATCH_S:MATCH,ph:'play',win:-1,startT:3,endT:0,players:[],toys:[],bombs:[],skiers:[],ices:[],spot:null,spotN:0,spotCd:0,
     snow:new Float32Array(GW*GH).fill(1),ev:[],skiT:rnd(11,16)};
   list.forEach((r,i)=>{
-    const x=FX0+(i+0.5)*(FX1-FX0)/n,y=FY0+62+((i%2)?28:0);
-    const p={id:i,name:r.name,color:r.color,bot:!!r.bot,x,y,ang:-Math.PI/2,hold:true,bx:x,by:y,size:0,walk:0,stun:0,inv:0,item:null,
-      cd:rnd(3,8),boost:0,pT:0,pCd:0,relT:9,rank:i,mx:0,my:0,pa:0,pb:0,ai:newAI()};
+    const x=FX0+(i+0.5)*(FX1-FX0)/n,y=slope?FY1-8-((i%2)?16:0):FY0+62+((i%2)?28:0);
+    const p={id:i,name:r.name,color:r.color,bot:!!r.bot,x,y,ang:-Math.PI/2,hold:true,bx:x,by:y,size:0,score:0,walk:0,broll:0,bvx:0,bvy:0,parked:false,
+      stun:0,stun0:0,inv:0,item:null,cd:rnd(3,8),boost:0,pT:0,pCd:0,relT:9,rank:i,mx:0,my:0,pa:0,pb:0,ai:newAI()};
     placeBall(p);g.players.push(p);
   });
   return g;
@@ -235,18 +248,35 @@ function snowAt(sn,x,y){
   for(let j=-2;j<=2;j++)for(let i=-2;i<=2;i++){const X=cx+i,Y=cy+j;if(X<0||Y<0||X>=GW||Y>=GH)continue;t+=sn[Y*GW+X];c++;}
   return c?t/c:0;
 }
+function ledgeAt(x,y){for(const L of LEDGES)if(x>=L.x0&&x<=L.x1&&y>=L.y-6&&y<=L.y+1.5)return L;return null;}
+function dropBall(g,p){
+  p.hold=false;p.relT=0;p.bvx=0;p.bvy=0;p.parked=g.mode===1&&!!ledgeAt(p.bx,p.by);
+}
 function stun(g,p,dur,kx,ky,force){
   if(!force&&(p.inv>0||p.stun>0))return false;
-  p.stun=Math.max(p.stun,dur);p.hold=false;p.relT=0;p.boost=0;p.x+=kx;p.y+=ky;clampP(p);
+  const was=p.stun>0;
+  p.stun=Math.max(p.stun,dur);p.stun0=was?Math.max(p.stun0,p.stun):p.stun;
+  if(p.hold)dropBall(g,p);
+  p.relT=0;p.boost=0;p.x+=kx;p.y+=ky;clampP(p);
   emit(g,{e:'stun',id:p.id});return true;
 }
 function chip(g,o,amt){o.size=Math.max(0,o.size-amt);emit(g,{e:'chip',x:o.bx,y:o.by});if(o.hold)placeBall(o);}
 function pickItem(g,p){
   const n=g.players.length,pos=n>1?p.rank/(n-1):0;
-  const w={ski:3,hook:3,toy:2+pos,bomb:3-1.5*pos,ice:p.rank===0?0:1+3*pos,spot:(pos>=0.5&&!g.spot)?(p.rank===n-1?5:2):0};
+  const spotOk=pos>=0.5&&!g.spot&&g.spotCd<=0&&!g.players.some(o=>o.item==='spot');
+  const w={ski:3,hook:3,toy:2+pos,bomb:3-1.5*pos,ice:p.rank===0?0:1+3*pos,spot:spotOk?(p.rank===n-1?5:2):0};
   let tot=0;for(const k in w)tot+=w[k];
   let r=Math.random()*tot;for(const k in w){r-=w[k];if(r<=0)return k;}
   return'ski';
+}
+function spotOwners(ps,sp){
+  const taken=[sp.by],own=[];
+  for(const q of sp.pts){
+    let best=null,bd=SPOT_R;
+    for(const o of ps)if(!taken.includes(o.id)){const d=dist(o.x,o.y,q.x,q.y);if(d<bd){bd=d;best=o;}}
+    if(best)taken.push(best.id);own.push(best?best.id:-1);
+  }
+  return{own,safe:taken};
 }
 function startSpot(g,p){
   const others=g.players.length-1,k=others>=2?others-1:1,dur=others>=2?5:3.2,pts=[];
@@ -321,7 +351,7 @@ function moveTo(p,x,y,stop){const dx=x-p.x,dy=y-p.y,d=Math.hypot(dx,dy);if(d>sto
 function botThink(g,p,dt){
   const a=p.ai;a.t-=dt;p.mx=p.my=0;
   if(p.stun>0)return;
-  const sp=g.spot,ps=g.players;
+  const sp=g.spot,ps=g.players,slope=g.mode===1;
   if(sp&&sp.by!==p.id){
     if(p.hold){p.pa=1;return;}
     if(a.spId!==sp.id||a.t<=0||a.sp<0){
@@ -358,8 +388,8 @@ function botThink(g,p,dt){
   a.raidCd-=dt;
   if(a.raidCd<=0){
     a.raidCd=rnd(7,15);
-    const top=ps.find(o=>o.rank===0);
-    if(top&&top!==p&&top.stun<=0&&dist(top.x,top.y,p.x,p.y)<95&&Math.random()<0.5){a.raid=3.5;a.raidT=top.id;p.pa=1;return;}
+    const top=ps.find(o=>o.rank===0),parkOk=!slope||p.size<8||p.by>FY1-12||!!ledgeAt(p.bx,p.by);
+    if(parkOk&&top&&top!==p&&top.stun<=0&&dist(top.x,top.y,p.x,p.y)<95&&Math.random()<0.5){a.raid=3.5;a.raidT=top.id;p.pa=1;return;}
   }
   if(p.item){
     if(a.useT<0)a.useT=g.t+rnd(0.8,3.5);
@@ -381,10 +411,22 @@ function botThink(g,p,dt){
   a.restCd-=dt;
   if(a.rest>0){a.rest-=dt;return;}
   if(a.restCd<=0){a.restCd=rnd(5,10);a.rest=rnd(0.3,0.9);return;}
+  if(slope){
+    if(p.size<2){a.climb=false;if(!a.tgtSet){a.tgt=Math.min(GOAL-p.score,rnd(26,48));a.tgtSet=true;}}else a.tgtSet=false;
+    if(a.tgt==null)a.tgt=rnd(26,48);
+    if(p.size>=Math.max(4,a.tgt)||p.size>=GOAL-p.score)a.climb=true;else if(p.size<a.tgt*0.6)a.climb=false;
+    if(g.tl<16&&p.size>=5)a.climb=true;
+    if(a.climb){
+      let dodge=0;
+      for(const o of ps)if(o!==p&&!o.hold&&!o.parked&&o.bvy>20&&o.size>=8&&o.by<p.y&&p.y-o.by<85&&Math.abs(o.bx-p.x)<radius(o.size)+12)dodge=o.bx>p.x?-1:1;
+      if(!dodge)for(const s of g.skiers)if(s.y<p.y&&Math.abs(s.x+s.vx*((p.y-s.y)/Math.max(1,s.vy))-p.x)<12)dodge=s.x>p.x?-1:1;
+      p.my=-1;p.mx=dodge*1.2;return;
+    }
+  }
   if(a.t<=0||dist(p.x,p.y,a.gx,a.gy)<8){
     a.t=rnd(2.2,3.4);let bv=-1e9;
     for(let i=0;i<10;i++){
-      const x=rnd(FX0+12,FX1-12),y=rnd(FY0+8,FY1-8);
+      const x=rnd(FX0+12,FX1-12),y=slope?rnd(FY1-46,FY1-6):rnd(FY0+8,FY1-8);
       let v=snowAt(g.snow,x,y)-dist(p.x,p.y,x,y)*0.0035;
       for(const o of ps)if(o!==p&&dist(o.x,o.y,x,y)<30)v-=0.3;
       for(const s of g.skiers)if(Math.abs(s.x+s.vx*((y-s.y)/Math.max(1,s.vy))-x)<16)v-=0.5;
@@ -415,6 +457,9 @@ function collide(g){
       const k=(m-d)/d/(wa+wb);
       if(wa){a.x+=dx*k;a.y+=dy*k;}
       if(wb){b.x-=dx*k;b.y-=dy*k;}
+    }else if(d<m&&g.mode===1&&a.bvy<5&&b.bvy<5){
+      const sft=(dx<0?-1:1)*(m-d)*0.5;
+      a.bx=clamp(a.bx+sft,FX0,FX1);b.bx=clamp(b.bx-sft,FX0,FX1);
     }
   }
   for(const p of ps){clampP(p);if(p.hold)placeBall(p);}
@@ -424,8 +469,8 @@ function step(g,dt){
   if(g.ph!=='play')return;
   regen(g.snow,dt,g.players.length);
   if(g.startT>0){g.startT-=dt;if(g.startT<=0)emit(g,{e:'go'});return;}
-  g.tl-=dt;
-  const ps=g.players,sn=g.snow;
+  g.tl-=dt;g.spotCd=Math.max(0,g.spotCd-dt);
+  const ps=g.players,sn=g.snow,slope=g.mode===1;
   for(const p of ps){
     if(p.bot)botThink(g,p,dt);
     p.boost=Math.max(0,p.boost-dt);p.pT=Math.max(0,p.pT-dt);p.pCd=Math.max(0,p.pCd-dt);p.relT+=dt;p.cd=Math.max(0,p.cd-dt);
@@ -434,6 +479,7 @@ function step(g,dt){
     let mx=p.mx,my=p.my;const l=Math.hypot(mx,my);if(l>1){mx/=l;my/=l;}
     const moving=l>0.15,r=radius(p.size);
     let sp=p.hold?SPD_HOLD*(1-0.42*p.size/100):SPD_FREE;if(p.boost>0)sp*=1.75;
+    if(slope&&moving){const up=Math.max(0,-my),dn=Math.max(0,my);sp*=p.hold?1-0.42*up+0.3*dn:1-0.15*up+0.15*dn;}
     if(moving){
       const ta=Math.atan2(my,mx);
       if(p.hold)p.ang+=clamp(angDiff(ta,p.ang),-TURN*dt,TURN*dt);else p.ang=ta;
@@ -443,18 +489,48 @@ function step(g,dt){
     clampP(p);
     const d=Math.hypot(p.x-ox,p.y-oy);p.walk+=d;
     if(p.hold){
-      placeBall(p);
-      const eq=0.2*d+0.8*sweep(sn,p.bx,p.by,r)/(2*r+3);
+      placeBall(p);p.broll+=d;
+      let eq=0.2*d+0.8*sweep(sn,p.bx,p.by,r)/(2*r+3);
+      if(slope)eq*=GROW_S*(0.1+1.5*Math.pow(clamp((p.by-FY0)/(FY1-FY0),0,1),2));
       if(eq>0){
         p.size=Math.min(GOAL,p.size+eq*GROW);
         if(p.item===null&&p.cd<=0&&Math.random()<eq*DIG_P){p.item=pickItem(g,p);p.cd=DIG_CD;emit(g,{e:'dig',id:p.id,it:p.item});}
       }
+      if(slope&&p.by<=GOAL_Y&&p.size>=1){
+        p.score=Math.min(GOAL,p.score+p.size);emit(g,{e:'deliver',id:p.id,amt:Math.max(1,Math.round(p.size)),x:p.bx,y:p.by});
+        p.size=0;placeBall(p);
+      }
     }else{
       const dx=p.bx-p.x,dy=p.by-p.y,dd=Math.hypot(dx,dy);
-      if(p.relT>0.35&&dd<r+6&&moving&&(mx*dx+my*dy)>0.3*dd){p.hold=true;p.ang=Math.atan2(dy,dx);p.x=p.bx-Math.cos(p.ang)*(r+5);p.y=p.by-Math.sin(p.ang)*(r+5);clampP(p);}
+      if(p.relT>0.35&&dd<r+6&&moving&&(mx*dx+my*dy)>0.3*dd){p.hold=true;p.parked=false;p.bvx=p.bvy=0;p.ang=Math.atan2(dy,dx);p.x=p.bx-Math.cos(p.ang)*(r+5);p.y=p.by-Math.sin(p.ang)*(r+5);clampP(p);}
     }
-    if(p.pa>0){p.pa=0;if(p.hold){p.hold=false;p.relT=0;}else if(p.pCd<=0)punch(g,p);}
+    if(p.pa>0){p.pa=0;if(p.hold)dropBall(g,p);else if(p.pCd<=0)punch(g,p);}
     if(p.pb>0){p.pb=0;useItem(g,p,null);}
+  }
+  // loose balls roll down the slope
+  if(slope)for(const p of ps){
+    if(p.hold||p.parked)continue;
+    const r=radius(p.size),bot=FY1-r*0.45;
+    if(p.by>=bot-0.2){p.by=Math.min(p.by,bot);p.bvy=0;p.bvx=0;continue;}
+    p.bvy=Math.min(ROLL_MAX,p.bvy+ROLL_ACC*dt);p.bvx*=Math.max(0,1-1.2*dt);
+    let ny=p.by+p.bvy*dt,stop=false;
+    for(const L of LEDGES)if(p.bx>=L.x0&&p.bx<=L.x1&&p.by<L.y-6&&ny>=L.y-6){ny=L.y-3;stop=true;p.parked=true;}
+    const lo=FX0+r*0.8-2,hi=FX1-r*0.8+2;
+    p.bx+=p.bvx*dt;if(p.bx<lo){p.bx=lo;p.bvx=Math.abs(p.bvx);}else if(p.bx>hi){p.bx=hi;p.bvx=-Math.abs(p.bvx);}
+    p.broll+=Math.abs(ny-p.by);p.by=ny;
+    if(stop||p.by>=bot){
+      if(p.by>=bot)p.by=bot;
+      if(p.bvy>40)emit(g,{e:'thud',x:p.bx,y:p.by});
+      p.bvy=0;p.bvx=0;continue;
+    }
+    if(p.bvy>30&&p.size>=8)for(const o of ps){
+      if(o===p||o.stun>0||o.inv>0)continue;
+      if(dist(o.x,o.y,p.bx,p.by)<r+4){
+        if(stun(g,o,0.6+p.size*0.012,(o.x<p.bx?-1:1)*10,5,false))emit(g,{e:'bonk',x:o.x,y:o.y});
+      }else if(o.hold&&dist(o.bx,o.by,p.bx,p.by)<r+radius(o.size)){
+        if(stun(g,o,0.5+p.size*0.008,0,0,false)){emit(g,{e:'bonk',x:o.bx,y:o.by});p.bvy*=0.5;p.bvx=(p.bx<o.bx?-1:1)*35;}
+      }
+    }
   }
   // toys
   for(const t of g.toys){
@@ -506,31 +582,32 @@ function step(g,dt){
     if(i.t<=0){const o=ps[i.tg];emit(g,{e:'ice',x:o.bx,y:o.by,id:o.id});chip(g,o,15);if(o.hold)stun(g,o,1.5,0,0,true);}
   }
   g.ices=g.ices.filter(i=>i.t>0);
-  // spotlight
+  // spotlight: when time runs out, everyone outside a light is struck
   if(g.spot){
     const sp=g.spot;sp.t-=dt;
     if(sp.t<=0){
-      const safe=[sp.by];
-      for(const q of sp.pts){
-        let best=null,bd=SPOT_R;
-        for(const o of ps)if(!safe.includes(o.id)){const d=dist(o.x,o.y,q.x,q.y);if(d<bd){bd=d;best=o;}}
-        if(best)safe.push(best.id);
-      }
+      const safe=spotOwners(ps,sp).safe;
       for(const o of ps)if(!safe.includes(o.id))stun(g,o,4.5,0,0,true);
-      emit(g,{e:'spotEnd',safe});g.spot=null;
+      emit(g,{e:'spotEnd',safe});g.spot=null;g.spotCd=SPOT_CD;
     }
   }
   collide(g);
-  const order=ps.slice().sort((a,b)=>b.size-a.size||a.id-b.id);
-  order.forEach((p,i)=>p.rank=i);
-  if(order[0].size>=GOAL||g.tl<=0){g.ph='end';g.win=order[0].id;g.endT=g.t;g.tl=Math.max(0,g.tl);emit(g,{e:'win',id:g.win});}
+  const key=slope?(p=>p.score+p.size*0.5):(p=>p.size);
+  let order=ps.slice().sort((a,b)=>key(b)-key(a)||a.id-b.id);
+  const done=slope?ps.some(p=>p.score>=GOAL-0.001):order[0].size>=GOAL;
+  if(done||g.tl<=0){
+    if(slope)order=ps.slice().sort((a,b)=>b.score-a.score||b.size-a.size||a.id-b.id);
+    order.forEach((p,i)=>p.rank=i);
+    g.ph='end';g.win=order[0].id;g.endT=g.t;g.tl=Math.max(0,g.tl);emit(g,{e:'win',id:g.win});
+  }else order.forEach((p,i)=>p.rank=i);
 }
 
 // ---------------------------------------------------------------- app state
 let role='demo';              // demo | host | client
 let scene='title';            // title | lobby | game | result
 let G=null,V=null,me=-1,online=false,isHostUi=true;
-let roster=[],peer=null,hostConn=null,roomCode='',botCount=3;
+let roster=[],peer=null,hostConn=null,roomCode='',botCount=3,curMode=0;
+try{curMode=localStorage.getItem('yk-mode')==='1'?1:0;}catch(_){}
 let prevS=null,curS=null,curAt=0,evOut=[];
 const inp={mx:0,my:0,a:0,b:0,ca:0,cb:0,aim:false};
 let aimBy=null,aimTxt='';
@@ -538,7 +615,7 @@ const isTouch=!!(window.matchMedia&&window.matchMedia('(pointer:coarse)').matche
 let muted=false,AC=null;
 
 // ---------------------------------------------------------------- effects
-let parts=[],lines=[],pops=[],banners=[],shake=0,flash=0,flakes=[];
+let parts=[],lines=[],pops=[],banners=[],bolts=[],floats=[],shake=0,flash=0,flakes=[];
 for(let i=0;i<70;i++)flakes.push({x:Math.random()*W,y:Math.random()*H,s:rnd(8,26),w:Math.random()*6,z:Math.random()<0.3?2:1});
 function burst(x,y,n,col,spd=30,life=0.5){for(let i=0;i<n;i++){const a=Math.random()*6.28,v=rnd(spd*0.3,spd);parts.push({x,y,vx:Math.cos(a)*v,vy:Math.sin(a)*v-10,l:rnd(life*0.5,life),col,g:60});}}
 function banner(t,d){banners=[{t,d,m:d}];}
@@ -559,6 +636,9 @@ function sfx(n){
   else if(n==='use')tone(520,.1,'triangle',.05,780);
   else if(n==='win'){[523,659,784,1047].forEach((f,i)=>tone(f,.2,'square',.05,0,i*.13));}
   else if(n==='safe')tone(880,.2,'triangle',.05,1320);
+  else if(n==='deliver'){[659,784,988].forEach((f,i)=>tone(f,.12,'square',.05,0,i*.08));}
+  else if(n==='bonk')tone(150,.12,'square',.07,60);
+  else if(n==='thunder'){tone(90,.5,'sawtooth',.09,30);tone(1800,.06,'square',.04,400);}
 }
 function fx(e){
   const P=V&&V.players;if(!P)return;const demo=role==='demo';
@@ -566,7 +646,7 @@ function fx(e){
     case'go':if(!demo){banner('スタート！',1.2);sfx('go');}break;
     case'dig':{const p=P[e.id];burst(p.bx,p.by,8,'#ffffff');pops.push({id:e.id,it:e.it,t:0});if(e.id===me){banner('「'+ITEMS[e.it].n+'」を掘り当てた！',1.8);sfx('dig');}break;}
     case'use':{const p=P[e.id];if(demo)break;
-      if(e.it==='spot'){banner(e.id===me?'スポットライト発動！':p.name+'のスポットライト！ 光に入れ！',2.4);sfx('alarm');}
+      if(e.it==='spot')sfx('alarm');
       else if(e.it==='ice'){banner('つららが落ちてくる！',1.4);sfx('warn');}
       else if(e.id===me)sfx('use');
       break;}
@@ -576,7 +656,12 @@ function fx(e){
     case'boom':shake=0.35;flash=0.12;burst(e.x,e.y,26,'#f08a3c',70,0.6);burst(e.x,e.y,14,'#fff3c4',40,0.4);lines.push({ring:1,x:e.x,y:e.y,t:0.3,m:0.3});sfx('boom');break;
     case'hook':lines.push({x1:e.x1,y1:e.y1,x2:e.x2,y2:e.y2,t:0.3,m:0.3});sfx('hook');break;
     case'ice':shake=0.2;burst(e.x,e.y-6,16,'#8fd0f0',50,0.6);sfx('ice');break;
-    case'spotEnd':flash=0.15;if(!demo){if(e.safe.includes(me)){banner('セーフ！',1.2);sfx('safe');}else banner('光に入れなかった…',1.6);}break;
+    case'spotEnd':{flash=0.15;let hit=0;for(const p of P)if(!e.safe.includes(p.id)){hit++;bolts.push({x:p.x,y:p.y,t:0.4,seed:(p.id+1)*977+((p.x*13)|0)});burst(p.x,p.y-4,12,'#fff3c4',50,0.5);}
+      if(hit){shake=0.3;if(!demo)sfx('thunder');}
+      if(!demo){if(e.safe.includes(me)){banner('セーフ！',1.2);if(!hit)sfx('safe');}else banner('光の外にいて雷に打たれた…',1.8);}break;}
+    case'deliver':{const p=P[e.id];burst(e.x,e.y-6,18,'#ffffff',46,0.7);burst(e.x,e.y-6,8,COL[p.color].m,40,0.7);floats.push({txt:'+'+e.amt,x:e.x,y:e.y-14,t:0,col:COL[p.color].d});if(!demo&&e.id===me){banner(e.amt+'% を届けた！',1.4);sfx('deliver');}break;}
+    case'bonk':shake=Math.max(shake,0.15);burst(e.x,e.y-4,10,'#ffffff',44,0.45);if(!demo)sfx('bonk');break;
+    case'thud':burst(e.x,e.y,6,'#e3ebf5',26,0.35);break;
     case'skiWarn':if(!demo){banner('スキー客がつっこんでくる！',1.5);sfx('warn');}break;
     case'toyDie':burst(e.x,e.y,8,'#3fae6b',26,0.4);break;
     case'win':{const p=P[e.id];for(let i=0;i<40;i++)parts.push({x:p.bx+rnd(-30,30),y:p.by-40+rnd(-20,10),vx:rnd(-20,20),vy:rnd(-40,-5),l:rnd(1,2.2),col:COL[(Math.random()*6)|0].m,g:50});sfx('win');break;}
@@ -588,6 +673,8 @@ function updFx(dt){
   for(const l of lines)l.t-=dt;lines=lines.filter(l=>l.t>0);
   for(const p of pops)p.t+=dt;pops=pops.filter(p=>p.t<0.8);
   for(const b of banners)b.d-=dt;banners=banners.filter(b=>b.d>0);
+  for(const b of bolts)b.t-=dt;bolts=bolts.filter(b=>b.t>0);
+  for(const f of floats)f.t+=dt;floats=floats.filter(f=>f.t<1.2);
   shake=Math.max(0,shake-dt);flash=Math.max(0,flash-dt);
   for(const f of flakes){f.y+=f.s*dt*f.z;f.x+=Math.sin(f.w+=dt*1.3)*8*dt;if(f.y>H){f.y=-2;f.x=Math.random()*W;}}
   if(V){
@@ -679,6 +766,29 @@ function drawBg(){
   F(0,H-4,W,1,'#b98c63');
   for(let x=10;x<W;x+=28){F(x,H-7,2,7,'#7a4e3a');F(x-1,H-8,4,1,'#ffffff');}
 }
+const bg2=document.createElement('canvas');bg2.width=W;bg2.height=H;
+const over2=document.createElement('canvas');over2.width=W;over2.height=H;
+function drawBg2(){
+  const b=bg2.getContext('2d'),rr=mul(5);b.drawImage(bg,0,0);
+  const F=(x,y,w,h,col)=>{b.fillStyle=col;b.fillRect(Math.round(x),Math.round(y),w,h);};
+  // the higher, the icier
+  for(let y=62;y<H-8;y++){const t=(y-62)/(H-70);F(3,y,W-6,1,'rgba(118,152,204,'+(0.24*(1-t)*(1-t)).toFixed(3)+')');}
+  for(let k=0;k<6;k++){const y0=88+k*21;for(let x=4;x<W-4;x++){if((x+k*5)%4===0)continue;F(x,y0+Math.round(Math.sin(x*0.017+k*1.3)*3),1,1,'rgba(140,168,210,.5)');}}
+  // deep drifts at the bottom
+  for(let i=0;i<34;i++){const x=8+rr()*(W-30),y=172+rr()*32,w=7+rr()*12;F(x,y,w,1,'#ffffff');F(x+1,y+1,Math.max(1,w-2),1,'#e1e9f4');}
+  const o=over2.getContext('2d');
+  const O=(x,y,w,h,col)=>{o.fillStyle=col;o.fillRect(Math.round(x),Math.round(y),w,h);};
+  // goal line and flags
+  for(let x=FX0-4;x<FX1+4;x+=3){const k=((x/3)|0)%2;O(x,GOAL_Y+2,3,2,k?'#d9534f':'#ffffff');O(x,GOAL_Y+4,3,1,k?'#ffffff':'#d9534f');}
+  for(let x=20;x<W;x+=43){O(x,GOAL_Y-9,1,13,'#4b5d80');O(x+1,GOAL_Y-9,6,4,'#d9534f');O(x+1,GOAL_Y-8,2,2,'#ffffff');O(x+5,GOAL_Y-8,2,2,'#ffffff');}
+  // log fences: loose balls stop here
+  for(const L of LEDGES){
+    const w=L.x1-L.x0+6,x0=L.x0-3;
+    O(x0,L.y-8,w,10,'#fbfdff');O(x0,L.y-8,w,1,'#dfe8f3');
+    O(x0,L.y+2,w,3,'#8a5a48');O(x0,L.y+2,w,1,'#b08468');O(x0,L.y+5,w,1,'rgba(100,128,172,.45)');
+    for(let x=L.x0;x<=L.x1;x+=12){O(x-1,L.y-2,2,8,'#5a3a2d');O(x-1,L.y-3,2,1,'#ffffff');}
+  }
+}
 function drawBackAnim(t){
   const lx=236;
   // windows flicker
@@ -758,14 +868,20 @@ function drawToy(t,time){
 function draw(time){
   texts=[];
   const P=V.players,spot=V.spot;
-  c.drawImage(bg,0,0);drawBackAnim(time);drawTrails(V.snow);
+  c.drawImage(V.mode===1?bg2:bg,0,0);drawBackAnim(time);drawTrails(V.snow);if(V.mode===1)c.drawImage(over2,0,0);
   // ground decals
   for(const b of V.bombs)if(b.ft<=0){for(let k=0;k<20;k++){const a=k/20*6.283+time;R(b.x+Math.cos(a)*BLAST,b.y+Math.sin(a)*BLAST,1,1,k%2?'#d9534f':'#f08a3c');}}
   for(const s of V.skiers)if(s.warn>0){
     for(let k=0;k<26;k++){const yy=FY0-8+k*6+((time*30)%6);R(s.x+s.vx*((yy-s.y)/s.vy),yy,1,3,'#d9534f');}
     if(Math.floor(time*6)%2){R(s.x-3,60,7,7,'#d9534f');R(s.x,61,1,3,'#fff');R(s.x,65,1,1,'#fff');}
   }
-  if(spot)for(const q of spot.pts){for(let k=0;k<24;k++){const a=k/24*6.283;R(q.x+Math.cos(a)*SPOT_R,q.y+Math.sin(a)*SPOT_R,1,1,'#f4b860');}}
+  let lights=null;
+  if(spot){
+    const cas=P[spot.by],own=spotOwners(P,spot).own;
+    lights=spot.pts.map((q,i)=>({x:q.x,y:q.y,o:own[i]}));
+    if(cas)lights.push({x:cas.x,y:cas.y-3,o:cas.id});
+    for(const q of lights){const col=q.o>=0?COL[P[q.o].color].m:'#f4b860',sz=q.o>=0?2:1;for(let k=0;k<24;k++){const a=k/24*6.283;R(q.x+Math.cos(a)*SPOT_R,q.y+Math.sin(a)*SPOT_R,sz,sz,col);}}
+  }
   // not holding: dotted line to my own ball
   const my=P[me];
   if(my&&!my.hold&&!my.stun&&V.ph==='play'){const d=dist(my.x,my.y,my.bx,my.by),n=Math.floor(d/5);for(let k=1;k<n;k++)R(lerp(my.x,my.bx,k/n),lerp(my.y,my.by,k/n),1,1,COL[my.color].m);}
@@ -777,7 +893,7 @@ function draw(time){
   for(const s of V.skiers)if(s.warn<=0)ents.push({y:s.y,k:4,s});
   ents.sort((a,b)=>a.y-b.y);
   for(const e of ents){
-    if(e.k===0){const p=e.p;if(V.ph==='end'&&V.win===p.id)drawSnowman(p.bx,p.by,radius(p.size),COL[p.color],time);else drawBall(p.bx,p.by,radius(p.size),p.walk,COL[p.color]);}
+    if(e.k===0){const p=e.p;if(V.ph==='end'&&V.win===p.id){if(V.mode===1)drawSnowman(clamp(p.bx,30,W-30),Math.max(p.by,94),radius(GOAL),COL[p.color],time);else drawSnowman(p.bx,p.by,radius(p.size),COL[p.color],time);}else drawBall(p.bx,p.by,radius(p.size),p.broll,COL[p.color]);}
     else if(e.k===1)drawPlayer(e.p,time);
     else if(e.k===2)drawToy(e.t,time);
     else if(e.k===3){const b=e.b;let x=b.x,y=b.y;if(b.ft>0){const k=1-b.ft/0.35;x=lerp(b.sx,b.x,k);y=lerp(b.sy,b.y,k)-Math.sin(k*Math.PI)*14;}
@@ -804,17 +920,31 @@ function draw(time){
     const pop=pops.find(q=>q.id===p.id);
     if(pop){const k=Math.min(1,pop.t/0.5);const x=lerp(p.bx,p.x,k)-4,y=lerp(p.by-6,p.y-22,k)-Math.sin(k*Math.PI)*8;R(x-1,y-1,10,10,'#ffffff');icon(R,pop.it,x,y,1);}
     else if(p.item&&!p.stun){R(p.x-5,p.y-23,10,10,'#ffffff');R(p.x-1,p.y-13,2,1,'#ffffff');icon(R,p.item,p.x-4,p.y-22,1);}
-    if(role!=='demo'){const ny=p.item&&!p.stun?p.y-25:p.y-14;T((p.id===me?'▼':'')+p.name,p.x,ny,6,p.id===me?COL[p.color].d:'#3c4d6e','center','#ffffff');}
+    if(p.stun>0){
+      const w0=Math.max(2,Math.round(Math.max(p.stun0,p.stun)*STUN_PX)),w=clamp(Math.round(p.stun*STUN_PX),1,w0),x0=Math.round(p.x-w0/2);
+      R(x0-1,p.y-17,w0+2,4,'#22304a');R(x0,p.y-16,w0,2,'#f3f7fb');R(x0,p.y-16,w,2,'#f08a3c');
+    }
+    if(role!=='demo'){const ny=p.stun>0?p.y-19:p.item?p.y-25:p.y-14;T((p.id===me?'▼':'')+p.name,p.x,ny,6,p.id===me?COL[p.color].d:'#3c4d6e','center','#ffffff');}
   }
   // spotlight darkness
   if(spot){
     const k=Math.min(1,(spot.dur-spot.t)*3);
     dc.clearRect(0,0,W,H);dc.globalCompositeOperation='source-over';dc.fillStyle='rgba(14,22,46,'+(0.62*k)+')';dc.fillRect(0,0,W,H);
     dc.globalCompositeOperation='destination-out';dc.fillStyle='#000';
-    for(const q of spot.pts){disc((x,y,w,h)=>dc.fillRect(x,y,w,h),q.x,q.y,SPOT_R,'#000');dc.fillStyle='rgba(0,0,0,.28)';dc.beginPath();dc.moveTo(q.x-3,0);dc.lineTo(q.x+3,0);dc.lineTo(q.x+SPOT_R,q.y);dc.lineTo(q.x-SPOT_R,q.y);dc.fill();dc.fillStyle='#000';}
+    for(const q of lights){disc((x,y,w,h)=>dc.fillRect(x,y,w,h),q.x,q.y,SPOT_R,'#000');dc.fillStyle='rgba(0,0,0,.28)';dc.beginPath();dc.moveTo(q.x-3,0);dc.lineTo(q.x+3,0);dc.lineTo(q.x+SPOT_R,q.y);dc.lineTo(q.x-SPOT_R,q.y);dc.fill();dc.fillStyle='#000';}
     c.drawImage(dark,0,0);
-    for(const q of spot.pts){c.globalAlpha=0.16;disc(R,q.x,q.y,SPOT_R,'#f4b860');c.globalAlpha=1;}
+    for(const q of lights){c.globalAlpha=q.o>=0?0.3:0.16;disc(R,q.x,q.y,SPOT_R,q.o>=0?COL[P[q.o].color].m:'#f4b860');c.globalAlpha=1;}
   }
+  for(const b of bolts){
+    if(Math.floor(b.t*40)%4===3)continue;
+    const rs=mul(b.seed),n=Math.max(2,Math.ceil(b.y/10));let px=b.x+(rs()-0.5)*40,py=0;
+    for(let k=1;k<=n;k++){
+      const ty=b.y*k/n,tx=k===n?b.x:b.x+(rs()-0.5)*18,st=Math.max(1,Math.ceil(ty-py));
+      for(let j=0;j<=st;j++){const x=lerp(px,tx,j/st),y=lerp(py,ty,j/st);R(x-1,y,3,1,'#f4d35e');R(x,y,1,1,'#ffffff');}
+      px=tx;py=ty;
+    }
+  }
+  for(const f of floats)T(f.txt,f.x,f.y-f.t*14,9,f.col,'center','#ffffff');
   for(const f of flakes)R(f.x,f.y,f.z,f.z,'#ffffff');
   if(flash>0){c.globalAlpha=Math.min(0.7,flash*5);R(0,0,W,H,'#ffffff');c.globalAlpha=1;}
   if(role!=='demo')drawHud(time);
@@ -858,14 +988,16 @@ function drawAim(my,P,time){
   else aimTxt='離すと 5秒間スピードアップ';
 }
 function drawHud(time){
-  const P=V.players,n=P.length,cw=Math.min(66,Math.floor((W-40)/n)),bw=cw-31,my=P[me];
+  const P=V.players,n=P.length,cw=Math.min(66,Math.floor((W-40)/n)),bw=cw-31,my=P[me],slope=V.mode===1;
   P.forEach((p,i)=>{
-    const col=COL[p.color],x0=4+i*cw,y0=4;
+    const col=COL[p.color],x0=4+i*cw,y0=4,val=slope?p.score:p.size;
     R(x0,y0+1,5,5,col.m);R(x0+1,y0,3,1,'#ffffff');R(x0,y0+3,5,1,'#ffffff');
-    if(p.rank===0&&p.size>0.5){R(x0,y0-3,1,2,'#eaa92a');R(x0+2,y0-3,1,2,'#eaa92a');R(x0+4,y0-3,1,2,'#eaa92a');R(x0,y0-2,5,1,'#eaa92a');}
-    R(x0+7,y0,bw+2,7,'#22304a');R(x0+8,y0+1,bw,5,'#f3f7fb');R(x0+8,y0+1,Math.round(bw*p.size/GOAL),5,col.m);
+    if(p.rank===0&&(val>0.5||p.size>0.5)){R(x0,y0-3,1,2,'#eaa92a');R(x0+2,y0-3,1,2,'#eaa92a');R(x0+4,y0-3,1,2,'#eaa92a');R(x0,y0-2,5,1,'#eaa92a');}
+    const fw=Math.round(bw*val/GOAL);
+    R(x0+7,y0,bw+2,7,'#22304a');R(x0+8,y0+1,bw,5,'#f3f7fb');R(x0+8,y0+1,fw,5,col.m);
+    if(slope){const cw2=Math.min(bw-fw,Math.round(bw*p.size/GOAL));if(cw2>0){c.globalAlpha=0.4;R(x0+8+fw,y0+1,cw2,5,col.m);c.globalAlpha=1;}}
     R(x0+9+bw,y0-2,1,9,'#22304a');R(x0+10+bw,y0-2,3,3,'#d9534f');
-    T(String(Math.floor(p.size)),x0+14+bw,y0+7,7,'#22304a','left');
+    T(String(Math.floor(val)),x0+14+bw,y0+7,7,'#22304a','left');
     if(i===me)R(x0,y0+9,bw+9,1,'#22304a');
   });
   const tl=Math.max(0,Math.ceil(V.tl));T(Math.floor(tl/60)+':'+String(tl%60).padStart(2,'0'),W-4,11,8,tl<=20?'#d9534f':'#22304a','right');
@@ -879,13 +1011,16 @@ function drawHud(time){
   }
   if(V.startT>0)T(String(Math.ceil(V.startT)),W/2,118,40,'#22304a','center','#ffffff');
   if(V.spot){
-    const sp=V.spot,mine=sp.by===me;
+    const sp=V.spot,mine=sp.by===me,cas=P[sp.by];
     T(String(Math.max(1,Math.ceil(sp.t))),W/2,52,26,'#f4b860','center','#101a2e');
-    T(mine?'あなたは安全。光に入るのをじゃましろ':'光は '+sp.pts.length+' つ。入れないと気絶！',W/2,66,7,'#ffffff','center','#101a2e');
+    T(mine?'あなたのスポットライト。光はついてくる':(cas?cas.name:'')+' のスポットライト。光に入れ！',W/2,66,7,'#ffffff','center','#101a2e');
   }
   const b=banners[0];
   if(b&&V.startT<=0){const y=V.spot?84:44;T(b.t,W/2,y,10,'#22304a','center','#ffffff');}
-  if(V.ph==='end'&&V.win>=0)T(P[V.win].name+' の雪だるまが完成！',W/2,40,12,COL[P[V.win].color].d,'center','#ffffff');
+  if(V.ph==='end'&&V.win>=0){
+    const w=P[V.win],full=(slope?w.score:w.size)>=GOAL-0.01;
+    T(full?w.name+' の雪だるまが完成！':'時間切れ！ '+w.name+' の勝ち',W/2,40,12,COL[w.color].d,'center','#ffffff');
+  }
 }
 function resize(){
   const r=cv.getBoundingClientRect(),dpr=Math.min(window.devicePixelRatio||1,3);
@@ -895,14 +1030,14 @@ function resize(){
 }
 
 // ---------------------------------------------------------------- client view
-function makeView(list){
-  return{tl:MATCH,ph:'play',win:-1,startT:3,toys:[],bombs:[],skiers:[],ices:[],spot:null,snow:new Float32Array(GW*GH).fill(1),
-    players:list.map((r,i)=>({id:i,name:r.name,color:r.color,x:0,y:0,ang:0,hold:true,bx:0,by:0,size:0,stun:0,inv:0,item:null,cd:0,boost:0,pT:0,rank:i,walk:0}))};
+function makeView(list,mode){
+  return{mode:mode===1?1:0,tl:mode===1?MATCH_S:MATCH,ph:'play',win:-1,startT:3,toys:[],bombs:[],skiers:[],ices:[],spot:null,snow:new Float32Array(GW*GH).fill(1),
+    players:list.map((r,i)=>({id:i,name:r.name,color:r.color,x:0,y:0,ang:0,hold:true,bx:0,by:0,size:0,score:0,stun:0,stun0:0,inv:0,item:null,cd:0,boost:0,pT:0,rank:i,walk:0,broll:0}))};
 }
 const r1=v=>Math.round(v*10)/10,r2=v=>Math.round(v*100)/100;
 function packSnap(g){
   return{t:'s',tl:r1(g.tl),ph:g.ph,win:g.win,st:r2(Math.max(0,g.startT)),
-    P:g.players.map(p=>[r1(p.x),r1(p.y),r2(p.ang),p.hold?1:0,r1(p.bx),r1(p.by),r1(p.size),r2(p.stun),p.inv>0?1:0,p.item,r1(p.cd),r2(p.boost),r2(p.pT),p.rank,Math.round(p.walk)]),
+    P:g.players.map(p=>[r1(p.x),r1(p.y),r2(p.ang),p.hold?1:0,r1(p.bx),r1(p.by),r1(p.size),r2(p.stun),p.inv>0?1:0,p.item,r1(p.cd),r2(p.boost),r2(p.pT),p.rank,Math.round(p.walk),r2(p.stun0),r1(p.score),Math.round(p.broll)]),
     T:g.toys.map(t=>[r1(t.x),r1(t.y),t.k]),
     B:g.bombs.map(b=>[r1(b.x),r1(b.y),r2(b.fuse),r2(b.ft),r1(b.sx),r1(b.sy)]),
     S:g.skiers.map(s=>[r1(s.x),r1(s.y),r1(s.vx),r1(s.vy),r2(s.warn),s.c]),
@@ -917,7 +1052,7 @@ function buildView(now){
     const c1=s.P[i],c0=o.P[i]||c1;if(!c1)return;
     p.x=lerp(c0[0],c1[0],a);p.y=lerp(c0[1],c1[1],a);p.ang=c0[2]+angDiff(c1[2],c0[2])*a;p.hold=!!c1[3];
     p.bx=lerp(c0[4],c1[4],a);p.by=lerp(c0[5],c1[5],a);p.size=lerp(c0[6],c1[6],a);
-    p.stun=c1[7];p.inv=c1[8];p.item=c1[9];p.cd=c1[10];p.boost=c1[11];p.pT=c1[12];p.rank=c1[13];p.walk=lerp(c0[14],c1[14],a);
+    p.stun=c1[7];p.inv=c1[8];p.item=c1[9];p.cd=c1[10];p.boost=c1[11];p.pT=c1[12];p.rank=c1[13];p.walk=lerp(c0[14],c1[14],a);p.stun0=c1[15];p.score=c1[16];p.broll=lerp(c0[17],c1[17],a);
   });
   const same=o.T.length===s.T.length;
   V.toys=s.T.map((t,i)=>({x:same?lerp(o.T[i][0],t[0],a):t[0],y:same?lerp(o.T[i][1],t[1],a):t[1],k:t[2]}));
@@ -979,7 +1114,7 @@ function frame(now){
 }
 function startDemo(){
   role='demo';me=-1;
-  G=newGame([0,1,2,3].map(i=>({name:BOTN[i],color:i,bot:true})));G.startT=0.01;V=G;parts=[];pops=[];lines=[];banners=[];
+  G=newGame([0,1,2,3].map(i=>({name:BOTN[i],color:i,bot:true})),curMode);G.startT=0.01;V=G;parts=[];pops=[];lines=[];banners=[];bolts=[];floats=[];
 }
 
 // ---------------------------------------------------------------- UI and rooms
@@ -996,6 +1131,16 @@ function rebuildRoster(){
   roster.forEach((r,i)=>r.color=i);
 }
 function listOf(){return roster.map(r=>({name:r.name,color:r.color,bot:r.bot}));}
+function renderModes(){
+  for(const k of['t','l'])for(const m of[0,1]){const b=$('m-'+k+m);b.setAttribute('aria-pressed',String(curMode===m));if(k==='l')b.disabled=!isHostUi;}
+  $('md-t').textContent=$('md-l').textContent=MODES[curMode].d;
+}
+function setMode(m){
+  if(m===curMode)return;
+  curMode=m;try{localStorage.setItem('yk-mode',String(m));}catch(_){}
+  renderModes();if(role==='demo')startDemo();
+  if(scene==='lobby'&&isHostUi&&online)broadcastLobby();
+}
 function renderLobby(list,you,host){
   const ul=$('members');ul.textContent='';
   list.forEach((r,i)=>{
@@ -1008,27 +1153,28 @@ function renderLobby(list,you,host){
   $('botrow').hidden=!host;$('b-start').hidden=!host;$('copyrow').hidden=!roomCode;
   $('botn').textContent=String(list.filter(r=>r.bot).length);
   $('lobbynote').textContent=host?'コードを伝えて、そろったら「はじめる」。最大6人。':'ホストが始めるのを待っています。';
+  renderModes();
 }
 function broadcastLobby(){
   rebuildRoster();const list=listOf();
-  roster.forEach((r,i)=>{if(r.conn&&r.conn.open)r.conn.send({t:'lobby',list,you:i,code:roomCode});});
+  roster.forEach((r,i)=>{if(r.conn&&r.conn.open)r.conn.send({t:'lobby',list,you:i,code:roomCode,mode:curMode});});
   renderLobby(list,0,true);
 }
 function openLobby(){scene='lobby';isHostUi=true;show('p-lobby');chipText();broadcastLobby();}
 function beginHostGame(){
   rebuildRoster();const list=listOf();
   roster.forEach(r=>{r.la=r.lb=0;});
-  G=newGame(list);V=G;role='host';me=0;scene='game';acc=0;evOut=[];parts=[];pops=[];lines=[];banners=[];
+  G=newGame(list,curMode);V=G;role='host';me=0;scene='game';acc=0;evOut=[];parts=[];pops=[];lines=[];banners=[];bolts=[];floats=[];
   inp.a=inp.b=0;
-  roster.forEach((r,i)=>{if(r.conn&&r.conn.open)r.conn.send({t:'start',list,you:i});});
-  show(null);banner('雪玉を100%まで育てろ！',2.6);if(document.activeElement&&document.activeElement.blur)document.activeElement.blur();
+  roster.forEach((r,i)=>{if(r.conn&&r.conn.open)r.conn.send({t:'start',list,you:i,mode:curMode});});
+  show(null);banner(curMode===1?'育てて、頂上の旗まで運べ！':'雪玉を100%まで育てろ！',2.6);if(document.activeElement&&document.activeElement.blur)document.activeElement.blur();
 }
 function showResult(){
   scene='result';
   const P=V.players.slice().sort((a,b)=>a.rank-b.rank),ol=$('res-list');ol.textContent='';
   P.forEach((p,i)=>{
     const li=document.createElement('li'),sw=document.createElement('span'),nm=document.createElement('span'),pc=document.createElement('span');
-    sw.className='sw';sw.style.background=COL[p.color].m;nm.textContent=(i+1)+'位  '+p.name+(p.id===me?'（あなた）':'');pc.className='pc';pc.textContent=Math.floor(p.size)+'%';
+    sw.className='sw';sw.style.background=COL[p.color].m;nm.textContent=(i+1)+'位  '+p.name+(p.id===me?'（あなた）':'');pc.className='pc';pc.textContent=Math.floor(V.mode===1?p.score:p.size)+'%';
     li.append(sw,nm,pc);ol.append(li);
   });
   const w=V.players[V.win];
@@ -1041,7 +1187,7 @@ function showResult(){
 }
 function leave(msg){
   try{if(peer)peer.destroy();}catch(_){}
-  peer=null;hostConn=null;lastHost=0;online=false;roomCode='';roster=[];prevS=curS=null;scene='title';
+  peer=null;hostConn=null;lastHost=0;online=false;roomCode='';roster=[];prevS=curS=null;scene='title';isHostUi=true;renderModes();
   startDemo();show('p-title');chipText();setMsg(msg||'');
 }
 function netFail(){
@@ -1115,8 +1261,8 @@ function joinRoom(){
 function clientData(d){
   if(!d||typeof d!=='object')return;
   lastHost=performance.now();
-  if(d.t==='lobby'){scene='lobby';role='demo';if(!G||G.players.length!==4||G.players.some(p=>!p.bot))startDemo();isHostUi=false;roomCode=d.code||roomCode;show('p-lobby');chipText();setMsg('');renderLobby(d.list,d.you,false);}
-  else if(d.t==='start'){role='client';G=null;V=makeView(d.list);me=d.you;prevS=curS=null;scene='game';inp.ca=inp.cb=0;parts=[];pops=[];lines=[];banners=[];show(null);banner('雪玉を100%まで育てろ！',2.6);}
+  if(d.t==='lobby'){const m=d.mode?1:0,ch=m!==curMode;curMode=m;scene='lobby';role='demo';if(ch||!G||G.players.length!==4||G.players.some(p=>!p.bot))startDemo();isHostUi=false;roomCode=d.code||roomCode;show('p-lobby');chipText();setMsg('');renderLobby(d.list,d.you,false);}
+  else if(d.t==='start'){role='client';G=null;curMode=d.mode?1:0;V=makeView(d.list,curMode);me=d.you;prevS=curS=null;scene='game';inp.ca=inp.cb=0;parts=[];pops=[];lines=[];banners=[];bolts=[];floats=[];show(null);banner(curMode===1?'育てて、頂上の旗まで運べ！':'雪玉を100%まで育てろ！',2.6);}
   else if(d.t==='s'&&role==='client'&&V){prevS=curS;curS=d;curAt=performance.now();if(!prevS)buildView(curAt);for(const e of d.E)fx(e);if(d.ph==='end'&&scene==='game'){scene='ending';setTimeout(()=>{if(role==='client'&&scene==='ending')showResult();},2500);}}
   else if(d.t==='no'){leave(d.why||'入れなかった。');}
 }
@@ -1124,6 +1270,7 @@ $('b-solo').onclick=()=>{online=false;roomCode='';roster=[{name:getName(),bot:fa
 $('b-host').onclick=hostRoom;
 $('b-join').onclick=joinRoom;
 $('code').addEventListener('keydown',e=>{if(e.key==='Enter')joinRoom();});
+for(const k of['t','l'])for(const m of[0,1])$('m-'+k+m).onclick=()=>setMode(m);
 $('b-botp').onclick=()=>{botCount++;broadcastLobby();};
 $('b-botm').onclick=()=>{botCount--;broadcastLobby();};
 $('b-start').onclick=()=>{if(roster.length>=2)beginHostGame();};
@@ -1229,7 +1376,7 @@ for(const k in ITEMS){
   ic.width=ic.height=10;const ix=ic.getContext('2d');icon((x,y,w,h,col)=>{ix.fillStyle=col;ix.fillRect(x,y,w,h);},k,1,1,1);
   dt.append(ic,ITEMS[k].n);dd.textContent=ITEMS[k].d;il.append(dt,dd);
 }
-renderKeys();drawBg();startDemo();
+renderKeys();renderModes();drawBg();drawBg2();startDemo();
 for(let i=0;i<900;i++)step(G,STEP);G.ev.length=0;G.spot=null;   // open on a match already in progress
 resize();window.addEventListener('resize',resize);
 if(window.ResizeObserver)new ResizeObserver(resize).observe(cv);
@@ -1238,7 +1385,7 @@ let ticker=null;
 try{ticker=new Worker(URL.createObjectURL(new Blob(['setInterval(()=>postMessage(0),33)'],{type:'text/javascript'})));ticker.onmessage=simTick;ticker.onerror=()=>{setInterval(simTick,33);};}
 catch(_){setInterval(simTick,33);}
 requestAnimationFrame(frame);
-window.__yk={newGame,step,radius,get G(){return G},get V(){return V},get scene(){return scene},get role(){return role},get me(){return me}};
+window.__yk={newGame,step,radius,setMode,LEDGES,get G(){return G},get V(){return V},get scene(){return scene},get role(){return role},get me(){return me}};
 })();
 </script>
 </body>
