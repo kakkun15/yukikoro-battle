@@ -135,6 +135,7 @@ button.ghost:hover{background:var(--night-2)}
 .ks-keys{display:flex;flex-wrap:wrap;gap:8px;min-width:0}
 .ks-keys kbd{font-size:15px;background:#fff;box-shadow:0 0 0 2px var(--ink),0 3px 0 2px var(--ink);padding:1px 8px;margin-bottom:3px}
 .ks-keys kbd.new{background:var(--lamp)}
+.sheet:focus,.keyset:focus{outline:none}
 .keyset.listen{border-color:var(--berry);background:#fff3f2}
 .listen-box{font-size:14px;color:#a3302c;animation:blink 1s steps(2) infinite}
 @keyframes blink{50%{opacity:.35}}
@@ -312,7 +313,7 @@ button.ghost:hover{background:var(--night-2)}
 </div>
 
 <div class="modal" id="settings" hidden>
-  <div class="sheet" role="dialog" aria-modal="true" aria-labelledby="set-h">
+  <div class="sheet" tabindex="-1" role="dialog" aria-modal="true" aria-labelledby="set-h">
     <div class="sheet-head"><h2 id="set-h">設定</h2><button class="sm" id="set-close" type="button">閉じる</button></div>
     <section class="sset">
       <h3>音楽</h3>
@@ -325,7 +326,7 @@ button.ghost:hover{background:var(--night-2)}
     </section>
     <section class="sset">
       <h3>キー</h3>
-      <div class="keyset" id="ks-a"><div class="ks-name">手<small>離す・パンチ</small></div><div class="ks-keys" id="ksk-a"></div><button class="sm" id="rb-a" type="button">変える</button></div>
+      <div class="keyset" id="ks-a" tabindex="-1"><div class="ks-name">手<small>離す・パンチ</small></div><div class="ks-keys" id="ksk-a"></div><button class="sm" id="rb-a" type="button">変える</button></div>
       <div class="keyset" id="ks-b"><div class="ks-name">道具<small>押して狙う・離して使う</small></div><div class="ks-keys" id="ksk-b"></div><button class="sm" id="rb-b" type="button">変える</button></div>
       <div class="row"><button class="sm" id="rb-reset" type="button">初期設定にもどす</button></div>
       <p class="keymsg" id="keymsg" role="status"></p>
@@ -1765,7 +1766,7 @@ $('rb-b').onclick=()=>setRebind(rebind==='b'?null:'b');
 $('rb-reset').onclick=()=>{KEYS={a:DEFK.a.slice(),b:DEFK.b.slice()};flashKey='';saveKeys();setRebind(null);$('keymsg').textContent='初期設定（手：X・F、道具：Space・E・Enter）にもどしたよ。';};
 function openSettings(toKeys){
   $('settings').hidden=false;setOpen=true;for(const k in keys)keys[k]=false;readKeys();aimEnd(null,false);
-  try{(toKeys?$('rb-a'):$('bgm-battle')).focus();}catch(_){}
+  try{(toKeys?$('ks-a'):$('settings').querySelector('.sheet')).focus({preventScroll:true});}catch(_){}
 }
 function closeSettings(){$('settings').hidden=true;setOpen=false;setRebind(null);try{$('open-set').focus();}catch(_){}}
 $('open-set').onclick=()=>openSettings(false);
