@@ -916,6 +916,7 @@ function newAC(){
   AC=new(window.AudioContext||window.webkitAudioContext)();
 }
 function audioUnlock(tap){
+  if(document.hidden)return false;   // game sounds keep firing in the background during a match; never wake audio from there
   try{
     if(!AC)newAC();
     if(tap&&AC.state!=='running'){const now=performance.now();if(now-acTry>800){acTry=now;if(++acFails>=2)newAC();}}   // count separate taps, not the 4 events of one tap
@@ -1761,9 +1762,15 @@ $('b-copy').onclick=()=>{
   try{navigator.clipboard.writeText(roomCode).then(done,()=>{$('copied').textContent='コードを書き写してね';});}catch(_){$('copied').textContent='コードを書き写してね';}
 };
 $('mute').onclick=()=>{muted=!muted;$('mute').textContent='音: '+(muted?'OFF':'ON');audioUnlock(true);if(muted&&keepAlive)keepAlive.pause();};
-const wakeAudio=()=>{if(!AC||AC.state!=='running'||(keepAlive&&keepAlive.paused&&!muted))audioUnlock(true);};
+const wakeAudio=()=>{if(document.hidden)return;bgPaused=false;if(!AC||AC.state!=='running'||(keepAlive&&keepAlive.paused&&!muted))audioUnlock(true);};
 for(const ev of['pointerdown','pointerup','touchend','click','keydown'])window.addEventListener(ev,wakeAudio,{capture:true,passive:true});
-document.addEventListener('visibilitychange',()=>{if(!document.hidden&&AC&&AC.state!=='running')audioUnlock(false);});
+// leaving the app/tab: stop all sound (the silent loop would otherwise let iPhone keep playing in the background)
+let bgPaused=false;
+function audioSleep(){bgPaused=true;try{if(keepAlive)keepAlive.pause();}catch(_){}try{if(AC&&AC.state==='running')AC.suspend();}catch(_){}}
+function audioWake(){if(!bgPaused)return;bgPaused=false;audioUnlock(false);}
+document.addEventListener('visibilitychange',()=>{if(document.hidden)audioSleep();else audioWake();});
+window.addEventListener('pagehide',audioSleep);window.addEventListener('pageshow',()=>{if(!document.hidden)audioWake();});
+window.addEventListener('blur',()=>{if(document.hidden)audioSleep();});
 audioUnlock(false);   // starts right away where the browser allows it (e.g. a PC you have played on before)
 
 // ---------------------------------------------------------------- input
