@@ -883,7 +883,7 @@ let bgmBattle='auto',bgmMenu='auto',matchSong='jingle';
 try{const ok=v=>v&&(v==='auto'||v==='off'||SONGS[v]);const b=localStorage.getItem('yk-bgm');if(ok(b))bgmBattle=b;const m=localStorage.getItem('yk-bgm-menu');if(ok(m))bgmMenu=m;}catch(_){}
 function pickBattle(){const ids=SONG_ORDER.filter(k=>SONGS[k].battle);return ids[(Math.random()*ids.length)|0];}
 function audioUnlock(){
-  try{AC=AC||new(window.AudioContext||window.webkitAudioContext)();if(AC.state==='suspended')AC.resume();}catch(_){return false;}
+  try{AC=AC||new(window.AudioContext||window.webkitAudioContext)();if(AC.state!=='running'){const r=AC.resume();if(r&&r.catch)r.catch(()=>{});}}catch(_){return false;}
   if(!MUS.gain){MUS.gain=AC.createGain();MUS.gain.gain.value=muted?0:0.9;MUS.gain.connect(AC.destination);
     const len=AC.sampleRate,buf=AC.createBuffer(1,len,AC.sampleRate),d=buf.getChannelData(0);let r=1;for(let i=0;i<len;i++){r^=r<<13;r^=r>>17;r^=r<<5;d[i]=((r>>>0)/4294967296)*2-1;}MUS.noise=buf;}
   return true;
@@ -1718,8 +1718,11 @@ $('b-copy').onclick=()=>{
   try{navigator.clipboard.writeText(roomCode).then(done,()=>{$('copied').textContent='コードを書き写してね';});}catch(_){$('copied').textContent='コードを書き写してね';}
 };
 $('mute').onclick=()=>{muted=!muted;$('mute').textContent='音: '+(muted?'OFF':'ON');audioUnlock();};
-const unlockOnce=()=>{audioUnlock();window.removeEventListener('pointerdown',unlockOnce);window.removeEventListener('keydown',unlockOnce);};
-window.addEventListener('pointerdown',unlockOnce);window.addEventListener('keydown',unlockOnce);
+// iPhone (Safari, Brave, in-app browsers) only lets sound start from a tap that ends (touchend/click), and
+// pauses it again when the app goes to the background, so keep trying on every tap until it is running.
+const wakeAudio=()=>{if(!AC||AC.state!=='running')audioUnlock();};
+for(const ev of['pointerdown','pointerup','touchend','click','keydown'])window.addEventListener(ev,wakeAudio,{capture:true,passive:true});
+document.addEventListener('visibilitychange',()=>{if(!document.hidden&&AC&&AC.state!=='running')audioUnlock();});
 
 // ---------------------------------------------------------------- input
 const keys={};
@@ -1857,7 +1860,7 @@ let ticker=null;
 try{ticker=new Worker(URL.createObjectURL(new Blob(['setInterval(()=>postMessage(0),33)'],{type:'text/javascript'})));ticker.onmessage=simTick;ticker.onerror=()=>{setInterval(simTick,33);};}
 catch(_){setInterval(simTick,33);}
 requestAnimationFrame(frame);
-window.__yk={newGame,step,radius,setMode,LEDGES,SONGS,parseSeq,MUS,applyTheme,get says(){return says},get G(){return G},get V(){return V},get scene(){return scene},get role(){return role},get me(){return me}};
+window.__yk={newGame,step,radius,setMode,LEDGES,SONGS,parseSeq,MUS,applyTheme,get says(){return says},get G(){return G},get V(){return V},get scene(){return scene},get role(){return role},get me(){return me},get AC(){return AC}};
 })();
 </script>
 </body>
