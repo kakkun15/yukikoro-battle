@@ -81,6 +81,25 @@ ol.result li .pc{margin-left:auto;font-variant-numeric:tabular-nums}
 .guide dt canvas{width:24px;height:24px;image-rendering:pixelated;vertical-align:-6px;margin-right:6px;background:var(--snow)}
 kbd{font:inherit;font-size:13px;color:var(--ink);background:var(--snow);padding:0 6px;box-shadow:0 2px 0 var(--ice)}
 #p-result{justify-items:end;padding-right:28px}
+.quick{display:flex;flex-wrap:wrap;gap:6px 18px;align-items:center;font-size:14px;color:#d5e1f0}
+.quick .q{display:flex;align-items:center;gap:6px}
+.quick .qn{display:inline-grid;place-items:center;width:20px;height:20px;background:var(--lamp);color:var(--ink);font-size:13px}
+.quick .qk{margin-left:auto;color:var(--ice);display:flex;align-items:center;gap:4px;flex-wrap:wrap}
+.quick kbd{margin-right:4px}
+.hint{font-size:13px;line-height:1.55;color:#3c4d6e;margin:0;background:#e6eef7;padding:6px 8px}
+.modepick{display:flex;flex-direction:column;gap:6px}
+.modepick .lbl{font-size:14px}
+.mcards{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.mcard{display:flex;flex-direction:column;align-items:center;gap:3px;padding:8px 6px;text-align:center;line-height:1.3;box-shadow:3px 3px 0 var(--ink)}
+.mcard canvas{width:60px;height:36px;image-rendering:pixelated;background:#f3f7fb;box-shadow:0 0 0 1px var(--ice)}
+.mcard b{font-weight:400;font-size:15px}
+.mcard small{font-size:12px;color:#4a5f85}
+.mcard[aria-checked="true"]{background:#fff3d6;box-shadow:0 0 0 3px var(--ink),3px 3px 0 3px var(--ink)}
+.mcard[aria-checked="true"] b::before{content:'✓ ';color:#a8700f}
+.mcard[disabled]{opacity:1;cursor:default}
+.mcard[disabled][aria-checked="false"]{opacity:.45}
+dl.credits{grid-template-columns:auto 1fr;margin-bottom:8px}
+.guide a{color:var(--lamp)}
 .gsec{min-width:0}
 .gsec>summary{cursor:pointer;list-style:none;font-size:17px;color:var(--lamp);letter-spacing:.08em;margin:0 0 8px;display:flex;align-items:center;gap:8px}
 .gsec>summary::-webkit-details-marker{display:none}
@@ -119,9 +138,21 @@ button.ghost:hover{background:var(--night-2)}
 .listen-box{font-size:14px;color:#a3302c;animation:blink 1s steps(2) infinite}
 @keyframes blink{50%{opacity:.35}}
 @media (prefers-reduced-motion:reduce){.listen-box{animation:none}}
+/* phone held sideways while playing: the field fills the screen, controls float over its corners */
+@media (pointer:coarse) and (orientation:landscape) and (max-height:520px){
+  body.ingame .bar,body.ingame .quick,body.ingame .guide{display:none}
+  body.ingame .wrap{padding:0;max-width:none;gap:0}
+  body.ingame .stage{width:min(100vw,calc(100dvh * 16 / 9));max-width:none;aspect-ratio:16/9;margin-inline:auto;box-shadow:none}
+  body.ingame .touch{position:fixed;left:0;right:0;bottom:84px;padding-inline:14px;pointer-events:none;z-index:5}
+  body.ingame .touch>*{pointer-events:auto;opacity:.78}
+  body.ingame .stick{width:110px;height:110px}
+  body.ingame .tbtns button{width:68px;height:68px}
+}
 .keymsg{font-size:14px;color:#23743f;margin:0;min-height:1.5em}
 @media (max-width:760px){
   body{font-size:15px}
+  .quick{font-size:13px;gap:4px 12px}
+  .quick .qk{display:none}
   .wrap{gap:10px;padding-block:10px 32px}
   .bar .sub{display:none}
   .card{padding:12px 14px 14px;gap:9px}
@@ -147,10 +178,16 @@ button.ghost:hover{background:var(--night-2)}
 <div class="wrap">
   <div class="bar">
     <h1>ゆきころバトル</h1>
-    <p class="sub">雪玉を転がして育て、だれよりも先に雪だるまを完成させる。</p>
     <span class="chip" id="roomchip" hidden></span>
     <button id="open-set" type="button">設定</button>
     <button id="mute" type="button">音: ON</button>
+  </div>
+
+  <div class="quick" aria-label="かんたんな遊び方">
+    <div class="q"><span class="qn">1</span>雪玉を転がして育てる</div>
+    <div class="q"><span class="qn">2</span>掘ったアイテムでじゃまする</div>
+    <div class="q"><span class="qn">3</span>先に雪だるまを完成させたら勝ち</div>
+    <div class="qk">移動<kbd>矢印</kbd>　手<kbd id="qk-a">X</kbd>　道具<kbd id="qk-b">Space</kbd></div>
   </div>
 
   <div class="stage" id="stage">
@@ -160,13 +197,18 @@ button.ghost:hover{background:var(--night-2)}
       <div class="card">
         <div class="logo">ゆきころバトル<small>妨害あり・2〜6人の雪玉レース</small></div>
         <div class="row"><label for="name">なまえ</label><div class="grow"><input type="text" id="name" maxlength="8" autocomplete="off" placeholder="プレイヤー"></div></div>
-        <div class="stack">
+        <div class="stack" id="t-main">
           <button class="main" id="b-solo" type="button">ひとりで遊ぶ</button>
-          <button id="b-host" type="button">部屋を作る</button>
+          <button id="b-multi" type="button" aria-expanded="false" aria-controls="t-multi">マルチプレイ（友だちと遊ぶ）</button>
+        </div>
+        <div class="stack" id="t-multi" hidden>
+          <p class="hint">1人が部屋を作って、出てきた4文字のコードをみんなに伝える。ほかの人はそのコードを入れて部屋に入る。</p>
+          <button class="main" id="b-host" type="button">部屋を作る</button>
           <div class="row">
             <div class="grow"><input type="text" class="code" id="code" maxlength="4" placeholder="コード" autocomplete="off" aria-label="部屋コード"></div>
             <button id="b-join" type="button">部屋に入る</button>
           </div>
+          <button class="sm" id="b-multi-back" type="button">もどる</button>
         </div>
         <div class="msg" id="msg" role="status"></div>
       </div>
@@ -177,12 +219,18 @@ button.ghost:hover{background:var(--night-2)}
         <div class="stack" id="codebox">
           <h2>部屋コード</h2>
           <div class="roomcode" id="lobbycode">----</div>
+          <p class="hint">このコードを一緒に遊ぶ友だちに伝えてね。友だちはこのページを開いて「マルチプレイ」を押し、コードを入れて「部屋に入る」。</p>
           <div class="row" id="copyrow"><button class="sm" id="b-copy" type="button">コードをコピー</button><span id="copied" style="font-size:13px"></span></div>
         </div>
         <h2 id="lobbytitle" hidden>ひとりで遊ぶ</h2>
         <ul class="members" id="members"></ul>
-        <div class="row modes" role="group" aria-label="モード"><span class="lbl">モード</span><button class="sm" id="m-l0" type="button">雪原</button><button class="sm" id="m-l1" type="button">坂道</button></div>
-        <p class="modedesc" id="md-l"></p>
+        <div class="modepick">
+          <span class="lbl" id="mp-lbl">ゲームモード（どちらか1つを選ぶ）</span>
+          <div class="mcards" role="radiogroup" aria-labelledby="mp-lbl">
+            <button class="mcard" id="m-l0" type="button" role="radio"><canvas id="mi-0" width="40" height="24"></canvas><b>雪原モード</b><small>その場で育てて<br>100%で勝ち</small></button>
+            <button class="mcard" id="m-l1" type="button" role="radio"><canvas id="mi-1" width="40" height="24"></canvas><b>坂道モード</b><small>頂上まで運んで<br>合計100%で勝ち</small></button>
+          </div>
+        </div>
         <div class="opts">
           <label for="ski-l">スキー客</label><select id="ski-l"></select>
           <span>ボットの数</span><span class="stepper"><button class="sm" id="b-botm" type="button" aria-label="ボットを減らす">−</button><span id="botn">0</span><button class="sm" id="b-botp" type="button" aria-label="ボットを増やす">＋</button></span>
@@ -238,9 +286,21 @@ button.ghost:hover{background:var(--night-2)}
       <dl id="itemlist"></dl>
       <p style="margin-top:10px">スキー客（ステージのじゃま）は「！」の列を上からすべってくる。ぶつかった人は気絶、雪玉は3%小さくなる。出てくる頻度はロビーで変えられる。</p>
     </details>
+    <details class="gsec">
+      <summary>音楽について</summary>
+      <p>BGMは音声ファイルを使っていない。ページの中のプログラムが、ファミコンと同じ4種類の音（矩形波2つ・三角波・ノイズ）をその場で鳴らしている。</p>
+      <p>曲の音符はAI（AnthropicのClaude）が、著作権の切れた原曲の旋律を思い出してプログラムに直接書いたもの。伴奏・ベース・ドラムも新しく書いた。既存のMIDI・楽譜・録音は写していない。作者（kakkun15）が確認して公開している。</p>
+      <dl class="credits">
+        <dt>怒りの日</dt><dd>ヴェルディ「レクイエム」（1874年初演、1901年没）。旋律は原曲に忠実ではない編曲。</dd>
+        <dt>ジングルベル</dt><dd>ジェームズ・ピアポント（1857年出版、1893年没）</dd>
+        <dt>きよしこの夜</dt><dd>フランツ・グルーバー（1818年初演、1863年没）。日本語の歌詞は使っていない。</dd>
+        <dt>雪合戦マーチ・ふぶきの坂道・雪の宿</dt><dd>このゲームのためのオリジナル曲</dd>
+      </dl>
+      <p>日本の著作権は原則として作者の死後70年で切れる。くわしい根拠は<a href="https://github.com/kakkun15/yukikoro-battle#音楽について" target="_blank" rel="noopener">READMEの「音楽について」</a>。</p>
+    </details>
     <details class="gsec" open>
       <summary>友だちと遊ぶ</summary>
-      <p>1人が「部屋を作る」を押して、出てきた4文字のコードを伝える。ほかの人は同じページを開いてコードを入れる。ホストのブラウザがゲームを動かすので、サーバーを借りる必要はない。</p>
+      <p>「マルチプレイ」から、1人が「部屋を作る」を押して、出てきた4文字のコードを伝える。ほかの人は同じページを開いてコードを入れる。ホストのブラウザがゲームを動かすので、サーバーを借りる必要はない。</p>
       <p>ホストがタブを閉じると部屋も消える。途中で抜けた人はボットが引き継ぐ。</p>
     </details>
   </section>
@@ -753,12 +813,12 @@ const SONGS={};
   const jch='C C C F F G G C C C C F F G G C C C C C F C D G C C C C F C G C'.split(' ');
   SONGS.jingle={n:'ジングルベル',bpm:176,battle:1,d1:0.5,d2:0.25,v:[0.10,0.05,0.16,0.08],
     p1:jv+' '+jc,p2:chordBars(jch,16,[-1,1,-1,2],2,4),tri:bassBars(jch,['r:4','f:4','r:4','f:4']),noi:rep_('K:2 H:2 S:2 H:2 K:2 H:2 S:2 H:2',32)};
-  // We Wish You a Merry Christmas (traditional)
-  const wv='G5:4 G5:2 A5:2 G5:2 F#5:2 E5:4 C5:4 E5:4 A5:4 A5:2 B5:2 A5:2 G5:2 F#5:4 D5:4 D5:4 B5:4 B5:2 C6:2 B5:2 A5:2 G5:4 E5:4 D5:2 D5:2 E5:4 A5:4 F#5:4 G5:8 D5:4';
-  const wc='G5:4 G5:4 G5:4 F#5:8 F#5:4 G5:4 F#5:4 E5:4 D5:8 A5:4 B5:4 A5:2 A5:2 G5:2 G5:2 D6:4 D5:4 D5:2 D5:2 E5:4 A5:4 F#5:4 G5:8 D5:4';
-  const wch='G C A D B Em D G G D Em D G D C G'.split(' ');
-  SONGS.wish={n:'おめでとうクリスマス',bpm:200,battle:1,d1:0.25,d2:0.125,v:[0.10,0.05,0.16,0.07],
-    p1:wv+' '+wc,p2:chordBars(wch,12,[-1,1,2],4,4),tri:bassBars(wch,['r:4','f:4','f:4']),noi:rep_('K:4 H:4 S:4',16)};
+  // Original: Yukigassen march
+  const mm='D5:2 G5:2 B5:4 A5:2 G5:2 D5:4 B4:4 D5:4 G5:8 E5:2 G5:2 C6:4 B5:2 A5:2 G5:4 F#5:4 A5:4 D5:8 D5:2 G5:2 B5:4 D6:4 B5:4 C6:4 B5:2 A5:2 G5:4 E5:4 A5:4 C6:4 B5:2 A5:2 G5:4 F#5:6 E5:2 D5:8 '+
+    'E5:4 E5:2 F#5:2 G5:4 E5:4 D5:4 B4:4 G4:8 C5:4 E5:4 A5:4 G5:4 F#5:4 A5:4 D6:8 B5:4 B5:2 A5:2 G5:4 D5:4 E5:4 G5:4 C6:8 A5:4 F#5:4 D5:4 F#5:4 G5:8 R:4 D5:4';
+  const mch='G G C D G Em Am D C G Am D G C D G'.split(' ');
+  SONGS.march={n:'雪合戦マーチ',bpm:168,battle:1,d1:0.25,d2:0.125,v:[0.10,0.05,0.16,0.08],
+    p1:mm,p2:chordBars(mch,16,[-1,1,-1,2],2,4),tri:bassBars(mch,['r:4','f:4','r:4','f:4']),noi:rep_('K:4 S:4 K:2 K:2 S:4',16)};
   // Original: Fubuki (blizzard on the slope)
   const fm='A4:4 D5:4 F5:4 E5:2 D5:2 D5:4 C5:2 Bb4:2 F5:8 E5:4 G5:4 E5:2 C5:2 E5:4 C#5:6 A4:2 E5:8 A4:4 D5:4 F5:4 A5:4 G5:4 F5:2 E5:2 D5:8 Bb5:4 A5:2 G5:2 F5:4 E5:4 E5:6 C#5:2 A4:8 '+
     'F5:2 F5:2 R:2 F5:2 G5:4 A5:4 G5:4 E5:4 C5:8 D5:2 D5:2 R:2 D5:2 E5:4 F5:4 F5:4 D5:4 Bb4:8 G5:4 F5:2 G5:2 Bb5:4 A5:4 G5:4 F5:2 E5:2 C5:8 E5:4 C#5:4 E5:4 G5:4 A5:8 G5:4 E5:4';
@@ -797,7 +857,7 @@ function DIES(){
   const noi=rep_('C:2 R:3 B:1 R:2 C:2 R:3 B:1 R:2',4)+' '+rep_('B:2 H:2 S:2 H:2 B:2 H:2 S:2 S:2',8)+' '+rep_('C:2 R:3 B:1 R:2 C:2 R:3 B:1 R:2',2)+' '+rep_('B:2 H:2 S:2 H:2 B:2 H:2 S:2 S:2',2);
   return{n:'怒りの日（ヴェルディ）',bpm:160,battle:1,d1:0.5,d2:0.25,v:[0.10,0.05,0.17,0.10],p1,p2,tri,noi};
 }
-const SONG_ORDER=['dies','jingle','wish','fubuki','yado','silent'];
+const SONG_ORDER=['dies','jingle','march','fubuki','yado','silent'];
 function parseSeq(str){const out=[];let len=4;for(const t of String(str).trim().split(/\s+/)){if(!t)continue;const i=t.indexOf(':');const n=i<0?t:t.slice(0,i);if(i>=0)len=+t.slice(i+1);out.push([n,len]);}return out;}
 const NOTE_I={C:0,D:2,E:4,F:5,G:7,A:9,B:11};
 function nfreq(n){const m=/^([A-G])([#b]?)(-?\d)$/.exec(n);if(!m)return 0;const k=NOTE_I[m[1]]+(m[2]==='#'?1:m[2]==='b'?-1:0)+(+m[3]+1)*12;return 440*Math.pow(2,(k-69)/12);}
@@ -1284,8 +1344,11 @@ function drawHud(time){
   });
   const tl=Math.max(0,Math.ceil(V.tl));T(Math.floor(tl/60)+':'+String(tl%60).padStart(2,'0'),W-4,11,8,tl<=20?'#d9534f':'#22304a','right','#ffffff');
   if(my){
-    const bx=4,by=H-27;R(bx,by,22,22,'#22304a');R(bx+1,by+1,20,20,'#f3f7fb');
-    if(my.item){icon(R,my.item,bx+3,by+3,2);T(ITEMS[my.item].n,bx+26,by+10,7,'#22304a','left','#ffffff');if(!aimTxt)T(isTouch?'道具ボタン 長押しで狙う':keyName(KEYS.b[0])+' 長押しで狙う・離して使う',bx+26,by+19,6,'#4a5f85','left','#ffffff');}
+    const bx=4,by=H-27,rr=radius(my.size),under=(my.x<150&&my.y>H-40)||(my.bx-rr<150&&my.by+rr*0.5>H-40);
+    if(under)c.globalAlpha=0.3;
+    R(bx,by,22,22,'#22304a');R(bx+1,by+1,20,20,'#f3f7fb');
+    if(under){if(my.item)icon(R,my.item,bx+3,by+3,2);c.globalAlpha=1;}
+    else if(my.item){icon(R,my.item,bx+3,by+3,2);T(ITEMS[my.item].n,bx+26,by+10,7,'#22304a','left','#ffffff');if(!aimTxt)T(isTouch?'道具ボタン 長押しで狙う':keyName(KEYS.b[0])+' 長押しで狙う・離して使う',bx+26,by+19,6,'#4a5f85','left','#ffffff');}
     else if(my.cd>0){const h=Math.round(20*my.cd/DIG_CD);R(bx+1,by+21-h,20,h,'#c5d5e8');T(String(Math.ceil(my.cd)),bx+11,by+15,9,'#4a5f85','center');T('次の発掘まで',bx+26,by+14,6,'#4a5f85','left','#ffffff');}
     else{if(Math.floor(time*3)%2)R(bx+9,by+9,4,4,'#f4b860');T('転がして掘り当てろ',bx+26,by+14,6,'#4a5f85','left','#ffffff');}
     if(aimTxt)T(aimTxt,W/2,H-6,7,'#a5302f','center','#ffffff');
@@ -1394,6 +1457,7 @@ function frame(now){
   if(role==='client'&&curS&&V){buildView(now);regen(V.snow,dt,V.players.length);for(const p of V.players)if(p.hold)sweep(V.snow,p.bx,p.by,radius(p.size));}
   if(!V)return;
   updFx(dt);draw(now/1000);updTouch();
+  const ing=scene==='game'||scene==='ending'||scene==='result';if(document.body.classList.contains('ingame')!==ing)document.body.classList.toggle('ingame',ing);
 }
 function startDemo(){
   role='demo';me=-1;
@@ -1415,10 +1479,9 @@ function rebuildRoster(){
 }
 function listOf(){return roster.map(r=>({name:r.name,color:r.color,bot:r.bot}));}
 function renderModes(){
-  for(const m of[0,1]){const b=$('m-l'+m);b.setAttribute('aria-pressed',String(curMode===m));b.disabled=!isHostUi;}
+  for(const m of[0,1]){const b=$('m-l'+m);b.setAttribute('aria-checked',String(curMode===m));b.disabled=!isHostUi;}
   $('ski-l').value=String(curSki);$('ski-l').disabled=!isHostUi;
   $('lv-l').value=String(curLv);$('lv-l').disabled=!isHostUi;
-  $('md-l').textContent=MODES[curMode].d;
   for(const b of $('pre-chips').children)b.setAttribute('aria-pressed',String(+b.dataset.k===myPre));
 }
 function setMode(m){
@@ -1567,6 +1630,9 @@ function clientData(d){
 }
 $('b-solo').onclick=()=>{online=false;roomCode='';roster=[{name:getName(),bot:false,conn:null,la:0,lb:0,pre:myPre}];botCount=3;chipText();setMsg('');openLobby();};
 $('b-host').onclick=hostRoom;
+function showMulti(on){$('t-main').hidden=on;$('t-multi').hidden=!on;$('b-multi').setAttribute('aria-expanded',String(on));try{(on?$('b-host'):$('b-multi')).focus();}catch(_){}}
+$('b-multi').onclick=()=>showMulti(true);
+$('b-multi-back').onclick=()=>{showMulti(false);setMsg('');};
 $('b-join').onclick=joinRoom;
 $('code').addEventListener('keydown',e=>{if(e.key==='Enter')joinRoom();});
 for(const m of[0,1])$('m-l'+m).onclick=()=>setMode(m);
@@ -1619,6 +1685,7 @@ function keyName(c){
 }
 function kbd(t,cls){const k=document.createElement('kbd');k.textContent=t;if(cls)k.className=cls;return k;}
 function renderKeys(){
+  $('qk-a').textContent=keyName(KEYS.a[0]);$('qk-b').textContent=keyName(KEYS.b[0]);
   for(const act of['a','b']){
     const box=$('ksk-'+act),btn=$('rb-'+act),g=$('gk-'+act),mouse=act==='a'?'左クリック':'右クリック';
     $('ks-'+act).classList.toggle('listen',rebind===act);box.textContent='';
@@ -1716,6 +1783,12 @@ for(const k in ITEMS){
   dt.append(ic,ITEMS[k].n);dd.textContent=ITEMS[k].d;il.append(dt,dd);
 }
 renderKeys();renderModes();applyTheme(resolveTheme(false));startDemo();
+(()=>{for(const m of[0,1]){const x=$('mi-'+m).getContext('2d'),F=(a,b,w,h,col)=>{x.fillStyle=col;x.fillRect(Math.round(a),Math.round(b),w,h);};
+  F(0,0,40,24,'#f3f7fb');
+  if(m===0){F(0,0,40,5,'#c8dcef');for(let i=0;i<8;i++)F(4+i*4,15+(i%2),3,2,'#d8e3f0');disc(F,24,15,5,'#a5302f');disc(F,24,15,4,'#fbfdff');F(13,13,3,3,'#e2504c');F(13,16,3,3,'#a5302f');}
+  else{for(let y=0;y<24;y++)F(0,y,40,1,'rgba(118,152,204,'+(0.35*(1-y/24)).toFixed(2)+')');for(let k=0;k<40;k+=3)F(k,5,3,1,(k/3)%2?'#d9534f':'#ffffff');F(6,1,1,5,'#4b5d80');F(7,1,3,2,'#d9534f');
+    disc(F,20,14,4,'#a5302f');disc(F,20,14,3,'#fbfdff');F(19,19,3,3,'#e2504c');F(30,10,1,7,'#22304a');F(29,11,3,1,'#22304a');F(28,12,5,1,'#22304a');}
+}})();
 if(window.matchMedia&&window.matchMedia('(max-width:760px)').matches)document.querySelectorAll('.gsec').forEach((d,i)=>{if(i>0)d.open=false;});
 for(let i=0;i<900;i++)step(G,STEP);G.ev.length=0;G.spot=null;   // open on a match already in progress
 resize();window.addEventListener('resize',resize);
