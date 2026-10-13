@@ -283,7 +283,7 @@ button.ghost:hover{background:var(--night-2)}
       <summary>あそびかた</summary>
       <p><b>雪原モード</b>　雪玉は新しい雪の上を転がすほど大きくなる。通ったあとは雪が減るので、白いところを探して動く。先に100%まで育てた人の勝ち。3分30秒で時間切れ。</p>
       <p><b>坂道モード</b>　画面の上が坂の上。雪は下ほど深いので下で育てて、頂上の旗まで押し上げる。届けた大きさが自分の雪だるまに足されて、合計100%で勝ち。届けた分はもう減らない。4分で時間切れ。手を離した雪玉は坂を転がり落ちて、当たった人を気絶させる。丸太の柵の上では止まる。</p>
-      <p><b>チーム戦</b>　ロビーで「あり」にすると、赤と青の2対2か3対3。チームの合計が「人数×100%」（2対2なら200%、3対3なら300%）になったら勝ち。味方は自分と同じ扱いで、味方のパンチ・アイテム・転がる雪玉は当たらない。手ぶらで味方の雪玉のそばにいると、いっしょに押して速く進める。</p>
+      <p><b>チーム戦</b>　ロビーで「あり」にすると、赤と青の2対2か3対3。チームの合計が「人数×100%」（2対2なら200%、3対3なら300%）になったら勝ち。味方は自分と同じ扱いで、味方のパンチ・アイテム・転がる雪玉は当たらない。手ぶらで味方の雪玉のそばにいると、いっしょに押して速く進める。スポットライトは相手の人数分の光が出て、使った側のチームは雷に打たれない。代わりに光に先に入って、相手が入れないようにじゃまできる。</p>
       <p>気絶すると頭の上にバーが出る。長いほど長く動けない。ヘビやつららにねらわれると、頭の上に「手」のマークが出る。そのとき手のボタンを押せばよけられる。</p>
     </details>
     <details class="gsec" open>
@@ -427,16 +427,17 @@ function pickItem(g,p){
   return'ski';
 }
 function spotOwners(ps,sp){
-  const taken=sp.s0.slice(),own=[];
+  const taken=[sp.by],own=[];
   for(const q of sp.pts){
     let best=null,bd=SPOT_R;
     for(const o of ps)if(!taken.includes(o.id)){const d=dist(o.x,o.y,q.x,q.y);if(d<bd){bd=d;best=o;}}
     if(best)taken.push(best.id);own.push(best?best.id:-1);
   }
+  for(const id of sp.s0)if(!taken.includes(id))taken.push(id);
   return{own,safe:taken};
 }
 function startSpot(g,p){
-  const foes=g.players.filter(o=>!ally(o,p)),others=foes.length,k=others>=2?others-1:1,dur=others>=2?5:3.2,pts=[];
+  const foes=g.players.filter(o=>!ally(o,p)),others=foes.length,k=g.team?others:others>=2?others-1:1,dur=others>=2?5:3.2,pts=[];
   const only=others===1?foes[0]:null;
   for(let i=0;i<k;i++){
     let best=null;
@@ -532,15 +533,30 @@ function botBrain(g,p,dt){
       a.spId=sp.id;a.t=0.7;let bi=0,bv=1e9;
       sp.pts.forEach((q,i)=>{
         const d=dist(p.x,p.y,q.x,q.y);let closer=0;
-        for(const o of ps)if(o!==p&&!sp.s0.includes(o.id)&&dist(o.x,o.y,q.x,q.y)<d-4)closer++;
+        for(const o of ps)if(o!==p&&o.id!==sp.by&&dist(o.x,o.y,q.x,q.y)<d-4)closer++;
         const v=closer*400+d;if(v<bv){bv=v;bi=i;}
       });
       a.sp=bi;
     }
     const q=sp.pts[a.sp],d=moveTo(p,q.x,q.y,2);
-    if(d<9&&p.pCd<=0)for(const o of ps)if(!ally(o,p)&&!sp.s0.includes(o.id)&&o.stun<=0&&dist(o.x,o.y,p.x,p.y)<12&&Math.random()<dt*3){
+    if(d<9&&p.pCd<=0)for(const o of ps)if(!ally(o,p)&&o.id!==sp.by&&o.stun<=0&&dist(o.x,o.y,p.x,p.y)<12&&Math.random()<dt*3){
       p.ang=Math.atan2(o.y-p.y,o.x-p.x);p.pa=1;break;
     }
+    return;
+  }
+  if(sp&&g.team&&p.id!==sp.by&&sp.s0.includes(p.id)&&L.dodge&&botSees(g,p,sp)){
+    if(p.hold){p.pa=1;return;}
+    if(a.spId!==sp.id||a.t<=0||a.sp<0){
+      a.spId=sp.id;a.t=0.7;let bi=0,bv=1e9;
+      sp.pts.forEach((q,i)=>{
+        let v=dist(p.x,p.y,q.x,q.y);
+        for(const o of ps)if(o!==p&&o.bot&&o.team===p.team&&o.ai.spId===sp.id&&o.ai.sp===i)v+=400;
+        if(v<bv){bv=v;bi=i;}
+      });
+      a.sp=bi;
+    }
+    const q=sp.pts[a.sp],d=moveTo(p,q.x,q.y,2);
+    if(d<9&&p.pCd<=0)for(const o of ps)if(!ally(o,p)&&o.stun<=0&&dist(o.x,o.y,p.x,p.y)<12&&Math.random()<dt*3){p.ang=Math.atan2(o.y-p.y,o.x-p.x);p.pa=1;break;}
     return;
   }
   if(!p.hold){
@@ -1371,7 +1387,7 @@ function drawAim(my,P,time){
   }else if(it==='ice'){
     let t=null;for(const o of P)if(!ally(o,my)&&(!t||o.rank<t.rank))t=o;
     if(t){const r=radius(t.size)+3;mark(t.bx,t.by-r*0.5,r,bl);aimTxt='離すと '+t.name+' の雪玉に落ちる';}
-  }else if(it==='spot'){const o=P.filter(q=>!ally(q,my)).length;aimTxt=V.spot?'いまは使えない（光が出ている）':'離すと 光が '+(o>=2?o-1:1)+' つ出る';}
+  }else if(it==='spot'){const o=P.filter(q=>!ally(q,my)).length;aimTxt=V.spot?'いまは使えない（光が出ている）':'離すと 光が '+(V.team?o:o>=2?o-1:1)+' つ出る';}
   else aimTxt='離すと 5秒間スピードアップ';
 }
 function teamTot(P,t,slope){let s=0;for(const p of P)if(p.team===t)s+=slope?p.score:p.size;return s;}
@@ -1427,7 +1443,7 @@ function drawHud(time){
   if(V.spot){
     const sp=V.spot,mine=sp.by===me,cas=P[sp.by],safe=!mine&&sp.s0.includes(me);
     T(String(Math.max(1,Math.ceil(sp.t))),W/2,52,26,'#f4b860','center','#101a2e');
-    T(mine?'あなたのスポットライト。光はついてくる':safe?'味方のスポットライト。あなたに雷は落ちない':(cas?cas.name:'')+' のスポットライト。光に入れ！',W/2,66,7,'#ffffff','center','#101a2e');
+    T(mine?'あなたのスポットライト。光はついてくる':safe?'味方のスポットライト。先に光に入って相手をじゃましろ！':(cas?cas.name:'')+' のスポットライト。光に入れ！',W/2,66,7,'#ffffff','center','#101a2e');
   }
   const b=banners[0];
   if(b&&V.startT<=0){const y=V.spot?84:44;T(b.t,W/2,y,10,'#22304a','center','#ffffff');}
