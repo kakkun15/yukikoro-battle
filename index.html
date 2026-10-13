@@ -81,6 +81,58 @@ ol.result li .pc{margin-left:auto;font-variant-numeric:tabular-nums}
 .guide dt canvas{width:24px;height:24px;image-rendering:pixelated;vertical-align:-6px;margin-right:6px;background:var(--snow)}
 kbd{font:inherit;font-size:13px;color:var(--ink);background:var(--snow);padding:0 6px;box-shadow:0 2px 0 var(--ice)}
 #p-result{justify-items:end;padding-right:28px}
+.gsec{min-width:0}
+.gsec>summary{cursor:pointer;list-style:none;font-size:17px;color:var(--lamp);letter-spacing:.08em;margin:0 0 8px;display:flex;align-items:center;gap:8px}
+.gsec>summary::-webkit-details-marker{display:none}
+.gsec>summary::before{content:'▸';color:var(--ice);display:inline-block;transition:transform .15s}
+.gsec[open]>summary::before{transform:rotate(90deg)}
+.ctls{display:flex;flex-direction:column;gap:12px;margin-bottom:12px}
+.ctl{display:grid;grid-template-columns:3.2em 1fr;gap:4px 12px;align-items:center}
+.ctl-name{font-size:24px;color:var(--snow);grid-row:span 2;line-height:1.2}
+.ctl-keys{display:flex;flex-wrap:wrap;gap:6px}
+.ctl-desc{margin:0;font-size:14px;line-height:1.5;color:#c3d3e8}
+button.ghost{color:var(--snow);background:transparent;border-color:var(--line);box-shadow:none}
+button.ghost:hover{background:var(--night-2)}
+.opts{display:grid;grid-template-columns:auto 1fr;gap:8px 12px;align-items:center;font-size:14px}
+.opts select{justify-self:start}
+.stepper{display:flex;align-items:center;gap:10px}
+.saybox{display:flex;flex-direction:column;gap:6px}
+.saybox .lbl{font-size:14px}
+.chips{display:flex;flex-wrap:wrap;gap:6px}
+.chips button{font-size:13px;padding:3px 9px;box-shadow:2px 2px 0 var(--ink)}
+.chips button[aria-pressed="true"]{background:var(--ink);color:var(--snow)}
+.modal{position:fixed;inset:0;background:rgba(8,14,28,.62);display:grid;place-items:center;padding:16px;z-index:10;overflow:auto}
+.sheet{background:var(--snow);color:var(--ink);width:min(480px,100%);padding:16px 18px 18px;display:flex;flex-direction:column;gap:14px;box-shadow:0 0 0 3px var(--ink),8px 8px 0 3px rgba(0,0,0,.35)}
+.sheet-head{display:flex;justify-content:space-between;align-items:center;gap:12px}
+.sheet h2{font-size:20px;font-weight:400;margin:0}
+.sset{display:flex;flex-direction:column;gap:8px;border-top:2px dashed var(--ice);padding-top:10px}
+.sset h3{margin:0;font-size:14px;font-weight:400;color:#4a5f85;letter-spacing:.1em}
+.field{display:grid;grid-template-columns:7em 1fr;gap:10px;align-items:center;font-size:15px}
+.sheet select{font:inherit;font-size:15px;color:var(--ink);background:#fff;border:2px solid var(--ink);padding:3px 6px;border-radius:0;width:100%;min-width:0}
+.keyset{display:grid;grid-template-columns:6.5em 1fr auto;gap:10px;align-items:center;padding:6px 8px;border:2px solid transparent}
+.ks-name{font-size:20px;line-height:1.2}
+.ks-name small{display:block;font-size:12px;color:#4a5f85}
+.ks-keys{display:flex;flex-wrap:wrap;gap:8px;min-width:0}
+.ks-keys kbd{font-size:15px;background:#fff;box-shadow:0 0 0 2px var(--ink),0 3px 0 2px var(--ink);padding:1px 8px;margin-bottom:3px}
+.ks-keys kbd.new{background:var(--lamp)}
+.keyset.listen{border-color:var(--berry);background:#fff3f2}
+.listen-box{font-size:14px;color:#a3302c;animation:blink 1s steps(2) infinite}
+@keyframes blink{50%{opacity:.35}}
+@media (prefers-reduced-motion:reduce){.listen-box{animation:none}}
+.keymsg{font-size:14px;color:#23743f;margin:0;min-height:1.5em}
+@media (max-width:760px){
+  body{font-size:15px}
+  .wrap{gap:10px;padding-block:10px 32px}
+  .bar .sub{display:none}
+  .card{padding:12px 14px 14px;gap:9px}
+  .logo{font-size:24px}
+  .tbtns button{width:74px;height:74px}
+  .stick{width:116px;height:116px}
+  .guide{gap:4px}
+  .ctl-name{font-size:20px}
+  .keyset{grid-template-columns:5em 1fr auto}
+  .field{grid-template-columns:6.5em 1fr}
+}
 @media (max-width:760px){
   #p-result{padding-right:0}
   .panel{position:static;padding:14px 0 0;pointer-events:auto}
@@ -97,7 +149,7 @@ kbd{font:inherit;font-size:13px;color:var(--ink);background:var(--snow);padding:
     <h1>ゆきころバトル</h1>
     <p class="sub">雪玉を転がして育て、だれよりも先に雪だるまを完成させる。</p>
     <span class="chip" id="roomchip" hidden></span>
-    <label for="bgm">BGM <select id="bgm"></select></label>
+    <button id="open-set" type="button">設定</button>
     <button id="mute" type="button">音: ON</button>
   </div>
 
@@ -108,11 +160,8 @@ kbd{font:inherit;font-size:13px;color:var(--ink);background:var(--snow);padding:
       <div class="card">
         <div class="logo">ゆきころバトル<small>妨害あり・2〜6人の雪玉レース</small></div>
         <div class="row"><label for="name">なまえ</label><div class="grow"><input type="text" id="name" maxlength="8" autocomplete="off" placeholder="プレイヤー"></div></div>
-        <div class="row modes" role="group" aria-label="モード"><span class="lbl">モード</span><button class="sm" id="m-t0" type="button">雪原</button><button class="sm" id="m-t1" type="button">坂道</button></div>
-        <p class="modedesc" id="md-t"></p>
-        <div class="row"><label for="ski-t">スキー客</label><select id="ski-t"></select></div>
         <div class="stack">
-          <button class="main" id="b-solo" type="button">ひとりで遊ぶ（ボット3体）</button>
+          <button class="main" id="b-solo" type="button">ひとりで遊ぶ</button>
           <button id="b-host" type="button">部屋を作る</button>
           <div class="row">
             <div class="grow"><input type="text" class="code" id="code" maxlength="4" placeholder="コード" autocomplete="off" aria-label="部屋コード"></div>
@@ -125,14 +174,21 @@ kbd{font:inherit;font-size:13px;color:var(--ink);background:var(--snow);padding:
 
     <div class="panel" id="p-lobby" hidden>
       <div class="card">
-        <h2>部屋コード</h2>
-        <div class="roomcode" id="lobbycode">----</div>
-        <div class="row" id="copyrow"><button class="sm" id="b-copy" type="button">コードをコピー</button><span id="copied" style="font-size:13px"></span></div>
+        <div class="stack" id="codebox">
+          <h2>部屋コード</h2>
+          <div class="roomcode" id="lobbycode">----</div>
+          <div class="row" id="copyrow"><button class="sm" id="b-copy" type="button">コードをコピー</button><span id="copied" style="font-size:13px"></span></div>
+        </div>
+        <h2 id="lobbytitle" hidden>ひとりで遊ぶ</h2>
         <ul class="members" id="members"></ul>
         <div class="row modes" role="group" aria-label="モード"><span class="lbl">モード</span><button class="sm" id="m-l0" type="button">雪原</button><button class="sm" id="m-l1" type="button">坂道</button></div>
         <p class="modedesc" id="md-l"></p>
-        <div class="row"><label for="ski-l">スキー客</label><select id="ski-l"></select></div>
-        <div class="row" id="botrow"><span style="font-size:14px">ボット</span><button class="sm" id="b-botm" type="button" aria-label="ボットを減らす">−</button><span id="botn">0</span><button class="sm" id="b-botp" type="button" aria-label="ボットを増やす">＋</button></div>
+        <div class="opts">
+          <label for="ski-l">スキー客</label><select id="ski-l"></select>
+          <span>ボットの数</span><span class="stepper"><button class="sm" id="b-botm" type="button" aria-label="ボットを減らす">−</button><span id="botn">0</span><button class="sm" id="b-botp" type="button" aria-label="ボットを増やす">＋</button></span>
+          <label for="lv-l">ボットの強さ</label><select id="lv-l"></select>
+        </div>
+        <div class="saybox"><span class="lbl">勝負前のひとこと</span><div class="chips" id="pre-chips"></div></div>
         <div class="row">
           <button class="main grow" id="b-start" type="button">はじめる</button>
           <button id="b-leave" type="button">やめる</button>
@@ -145,6 +201,7 @@ kbd{font:inherit;font-size:13px;color:var(--ink);background:var(--snow);padding:
       <div class="card">
         <h2 id="res-title">けっか</h2>
         <ol class="result" id="res-list"></ol>
+        <div class="saybox"><span class="lbl">ひとこと（押すとキャラがしゃべる）</span><div class="chips" id="say-chips"></div></div>
         <div class="row">
           <button class="main grow" id="b-again" type="button">もう一回</button>
           <button id="b-back" type="button">もどる</button>
@@ -160,35 +217,55 @@ kbd{font:inherit;font-size:13px;color:var(--ink);background:var(--snow);padding:
   </div>
 
   <section class="guide">
-    <div>
-      <h2>あそびかた</h2>
+    <details class="gsec" open>
+      <summary>操作</summary>
+      <div class="ctls">
+        <div class="ctl"><div class="ctl-name">移動</div><div class="ctl-keys"><kbd>矢印</kbd><kbd>WASD</kbd></div><p class="ctl-desc">雪玉を持っている間は遅く、玉が大きいほど重い。</p></div>
+        <div class="ctl"><div class="ctl-name">手</div><div class="ctl-keys" id="gk-a"></div><p class="ctl-desc">雪玉から手を離す。手ぶらならパンチ。自分の雪玉に向かって歩くと持ち直す。</p></div>
+        <div class="ctl"><div class="ctl-name">道具</div><div class="ctl-keys" id="gk-b"></div><p class="ctl-desc">押している間は届く範囲と狙う相手が出る。離すと使う。</p></div>
+      </div>
+      <button class="sm ghost" id="open-keys" type="button">キーを変える</button>
+    </details>
+    <details class="gsec" open>
+      <summary>あそびかた</summary>
       <p><b>雪原モード</b>　雪玉は新しい雪の上を転がすほど大きくなる。通ったあとは雪が減るので、白いところを探して動く。先に100%まで育てた人の勝ち。3分30秒で時間切れ。</p>
       <p><b>坂道モード</b>　画面の上が坂の上。雪は下ほど深いので下で育てて、頂上の旗まで押し上げる。届けた大きさが自分の雪だるまに足されて、合計100%で勝ち。届けた分はもう減らない。4分で時間切れ。手を離した雪玉は坂を転がり落ちて、当たった人を気絶させる。丸太の柵の上では止まる。</p>
       <p>気絶すると頭の上にバーが出る。長いほど長く動けない。</p>
-      <dl>
-        <dt><kbd>矢印</kbd> / <kbd>WASD</kbd></dt><dd>移動。雪玉を持っている間は遅く、玉が大きいほど重い。</dd>
-        <dt id="k-a"></dt><dd>雪玉から手を離す。手ぶらならパンチ（相手を気絶させる）。自分の雪玉に向かって歩くと持ち直す。</dd>
-        <dt id="k-b"></dt><dd>アイテムを使う。押している間は届く範囲と狙う相手が出て、離すと使う。</dd>
-      </dl>
-      <div class="keyrow">
-        <button class="sm" id="rb-a" type="button">「手」のキーを変える</button>
-        <button class="sm" id="rb-b" type="button">「道具」のキーを変える</button>
-        <button class="sm" id="rb-reset" type="button">初期設定にもどす</button>
-      </div>
-      <p id="keymsg" role="status"></p>
-    </div>
-    <div>
-      <h2>アイテム</h2>
+    </details>
+    <details class="gsec" open>
+      <summary>アイテム</summary>
       <p>転がしていると雪の中から出てくる。出る確率は全員同じで、順位が低いほど強いものが出る。掘り当てたら次まで20秒。雪玉をけずるものを受けると、雪玉の上に減った分が出る。</p>
       <dl id="itemlist"></dl>
-      <p style="margin-top:10px">スキー客（ステージのじゃま）は「！」の列を上からすべってくる。ぶつかった人は気絶、雪玉は3%小さくなる。出てくる頻度はタイトルとロビーで変えられる。</p>
-    </div>
-    <div>
-      <h2>友だちと遊ぶ</h2>
+      <p style="margin-top:10px">スキー客（ステージのじゃま）は「！」の列を上からすべってくる。ぶつかった人は気絶、雪玉は3%小さくなる。出てくる頻度はロビーで変えられる。</p>
+    </details>
+    <details class="gsec" open>
+      <summary>友だちと遊ぶ</summary>
       <p>1人が「部屋を作る」を押して、出てきた4文字のコードを伝える。ほかの人は同じページを開いてコードを入れる。ホストのブラウザがゲームを動かすので、サーバーを借りる必要はない。</p>
       <p>ホストがタブを閉じると部屋も消える。途中で抜けた人はボットが引き継ぐ。</p>
-    </div>
+    </details>
   </section>
+</div>
+
+<div class="modal" id="settings" hidden>
+  <div class="sheet" role="dialog" aria-modal="true" aria-labelledby="set-h">
+    <div class="sheet-head"><h2 id="set-h">設定</h2><button class="sm" id="set-close" type="button">閉じる</button></div>
+    <section class="sset">
+      <h3>音楽</h3>
+      <div class="field"><label for="bgm-battle">対戦中の曲</label><select id="bgm-battle"></select></div>
+      <div class="field"><label for="bgm-menu">メニューの曲</label><select id="bgm-menu"></select></div>
+    </section>
+    <section class="sset">
+      <h3>背景</h3>
+      <div class="field"><label for="theme">時間帯</label><select id="theme"></select></div>
+    </section>
+    <section class="sset">
+      <h3>キー</h3>
+      <div class="keyset" id="ks-a"><div class="ks-name">手<small>離す・パンチ</small></div><div class="ks-keys" id="ksk-a"></div><button class="sm" id="rb-a" type="button">変える</button></div>
+      <div class="keyset" id="ks-b"><div class="ks-name">道具<small>押して狙う・離して使う</small></div><div class="ks-keys" id="ksk-b"></div><button class="sm" id="rb-b" type="button">変える</button></div>
+      <div class="row"><button class="sm" id="rb-reset" type="button">初期設定にもどす</button></div>
+      <p class="keymsg" id="keymsg" role="status"></p>
+    </section>
+  </div>
 </div>
 
 <script src="https://unpkg.com/peerjs@1.5.5/dist/peerjs.min.js"></script>
@@ -220,12 +297,12 @@ const radius=s=>3.5+0.145*s;
 const dist=(ax,ay,bx,by)=>Math.hypot(ax-bx,ay-by);
 
 // ---------------------------------------------------------------- simulation (host only)
-function newAI(){return{t:0,gx:0,gy:0,useT:-1,raid:0,raidT:-1,raidCd:rnd(6,14),sp:-1,spId:-1,rest:0,restCd:rnd(4,9)}}
-function newGame(list,mode,ski){
-  if(ski==null)ski=2;
+function newAI(){return{spSeenId:-1,spSeenT:0,wx:0,wy:0,wt:0,want:0,unstick:0,ux:0,uy:0,t:0,gx:0,gy:0,useT:-1,raid:0,raidT:-1,raidCd:rnd(6,14),sp:-1,spId:-1,rest:0,restCd:rnd(4,9)}}
+function newGame(list,mode,ski,lv){
+  if(ski==null)ski=2;if(lv==null)lv=1;
   const n=list.length,slope=mode===1;
   const g={t:0,mode:slope?1:0,tl:slope?MATCH_S:MATCH,ph:'play',win:-1,startT:3,endT:0,players:[],toys:[],bombs:[],skiers:[],ices:[],spot:null,spotN:0,spotCd:0,
-    snow:new Float32Array(GW*GH).fill(1),ev:[],ski,skiT:ski>0?rnd(SKI[ski].a*0.8,SKI[ski].b*0.75):1e9};
+    snow:new Float32Array(GW*GH).fill(1),ev:[],ski,lv,skiT:ski>0?rnd(SKI[ski].a*0.8,SKI[ski].b*0.75):1e9};
   list.forEach((r,i)=>{
     const x=FX0+(i+0.5)*(FX1-FX0)/n,y=slope?FY1-8-((i%2)?16:0):FY0+62+((i%2)?28:0);
     const p={id:i,name:r.name,color:r.color,bot:!!r.bot,x,y,ang:-Math.PI/2,hold:true,bx:x,by:y,size:0,score:0,walk:0,broll:0,bvx:0,bvy:0,parked:false,
@@ -358,11 +435,28 @@ function punch(g,p){
   for(const t of g.toys)if(dist(t.x,t.y,hx,hy)<11)t.life=0;
 }
 function moveTo(p,x,y,stop){const dx=x-p.x,dy=y-p.y,d=Math.hypot(dx,dy);if(d>stop){p.mx=dx/d;p.my=dy/d;}return d;}
+const BOTLV=[{sp:0.8,rest:[3,6],restL:[0.6,1.4],samples:4,use:[3,7],raid:0.15,raidCd:[12,20],react:0.9,dodge:false},
+  {sp:1,rest:[5,10],restL:[0.3,0.9],samples:10,use:[0.8,3.5],raid:0.5,raidCd:[7,15],react:0.25,dodge:true},
+  {sp:1,rest:[30,40],restL:[0,0.15],samples:18,use:[0.2,1.2],raid:0.75,raidCd:[5,9],react:0,dodge:true}];
+const BOTLVN=['よわい','ふつう','つよい'];
+function botSees(g,p,sp){const L=BOTLV[g.lv|0]||BOTLV[1],a=p.ai;if(a.spSeenId!==sp.id){a.spSeenId=sp.id;a.spSeenT=g.t;}return g.t-a.spSeenT>=L.react;}
 function botThink(g,p,dt){
+  const a=p.ai,L=BOTLV[g.lv|0]||BOTLV[1];
+  if(a.unstick>0&&p.stun<=0&&!g.spot){a.unstick-=dt;p.mx=a.ux;p.my=a.uy;return;}
+  botBrain(g,p,dt);
+  p.mx*=L.sp;p.my*=L.sp;
+  // watchdog: wanting to move but going nowhere -> step aside and pick a new goal
+  a.wt+=dt;if(Math.abs(p.mx)+Math.abs(p.my)>0.1)a.want+=dt;
+  if(a.wt>=1.2){
+    if(a.want>1&&p.stun<=0&&Math.hypot(p.x-a.wx,p.y-a.wy)<3){const an=Math.random()*6.283;a.ux=Math.cos(an);a.uy=Math.sin(an);a.unstick=0.5;a.t=0;}
+    a.wt=0;a.want=0;a.wx=p.x;a.wy=p.y;
+  }
+}
+function botBrain(g,p,dt){
   const a=p.ai;a.t-=dt;p.mx=p.my=0;
   if(p.stun>0)return;
-  const sp=g.spot,ps=g.players,slope=g.mode===1;
-  if(sp&&sp.by!==p.id){
+  const sp=g.spot,ps=g.players,slope=g.mode===1,L=BOTLV[g.lv|0]||BOTLV[1];
+  if(sp&&sp.by!==p.id&&botSees(g,p,sp)){
     if(p.hold){p.pa=1;return;}
     if(a.spId!==sp.id||a.t<=0||a.sp<0){
       a.spId=sp.id;a.t=0.7;let bi=0,bv=1e9;
@@ -392,17 +486,17 @@ function botThink(g,p,dt){
         return;
       }
     }
-    moveTo(p,p.bx,p.by,0);return;
+    moveTo(p,p.bx,p.by,1.5);return;
   }
   for(const t of g.toys)if(t.tg===p.id&&dist(t.x,t.y,p.x,p.y)<20){p.pa=1;return;}
   a.raidCd-=dt;
   if(a.raidCd<=0){
-    a.raidCd=rnd(7,15);
+    a.raidCd=rnd(L.raidCd[0],L.raidCd[1]);
     const top=ps.find(o=>o.rank===0),parkOk=!slope||p.size<8||p.by>FY1-12||!!ledgeAt(p.bx,p.by);
-    if(parkOk&&top&&top!==p&&top.stun<=0&&dist(top.x,top.y,p.x,p.y)<95&&Math.random()<0.5){a.raid=3.5;a.raidT=top.id;p.pa=1;return;}
+    if(parkOk&&top&&top!==p&&top.stun<=0&&dist(top.x,top.y,p.x,p.y)<95&&Math.random()<L.raid){a.raid=3.5;a.raidT=top.id;p.pa=1;return;}
   }
   if(p.item){
-    if(a.useT<0)a.useT=g.t+rnd(0.8,3.5);
+    if(a.useT<0)a.useT=g.t+rnd(L.use[0],L.use[1]);
     if(g.t>=a.useT){
       const it=p.item;let ok=false,hint=null;
       if(it==='ski'||it==='toy'||it==='ice')ok=true;
@@ -420,7 +514,7 @@ function botThink(g,p,dt){
   }else a.useT=-1;
   a.restCd-=dt;
   if(a.rest>0){a.rest-=dt;return;}
-  if(a.restCd<=0){a.restCd=rnd(5,10);a.rest=rnd(0.3,0.9);return;}
+  if(a.restCd<=0){a.restCd=rnd(L.rest[0],L.rest[1]);a.rest=rnd(L.restL[0],L.restL[1]);if(a.rest>0)return;}
   if(slope){
     if(p.size<2){a.climb=false;if(!a.tgtSet){a.tgt=Math.min(GOAL-p.score,rnd(26,48));a.tgtSet=true;}}else a.tgtSet=false;
     if(a.tgt==null)a.tgt=rnd(26,48);
@@ -430,12 +524,13 @@ function botThink(g,p,dt){
       let dodge=0;
       for(const o of ps)if(o!==p&&!o.hold&&!o.parked&&o.bvy>20&&o.size>=8&&o.by<p.y&&p.y-o.by<85&&Math.abs(o.bx-p.x)<radius(o.size)+12)dodge=o.bx>p.x?-1:1;
       if(!dodge)for(const s of g.skiers)if(s.y<p.y&&Math.abs(s.x+s.vx*((p.y-s.y)/Math.max(1,s.vy))-p.x)<12)dodge=s.x>p.x?-1:1;
+      if(!L.dodge)dodge=0;
       p.my=-1;p.mx=dodge*1.2;return;
     }
   }
   if(a.t<=0||dist(p.x,p.y,a.gx,a.gy)<8){
     a.t=rnd(2.2,3.4);let bv=-1e9;
-    for(let i=0;i<10;i++){
+    for(let i=0;i<L.samples;i++){
       const x=rnd(FX0+12,FX1-12),y=slope?rnd(FY1-46,FY1-6):rnd(FY0+8,FY1-8);
       let v=snowAt(g.snow,x,y)-dist(p.x,p.y,x,y)*0.0035;
       for(const o of ps)if(o!==p&&dist(o.x,o.y,x,y)<30)v-=0.3;
@@ -457,7 +552,6 @@ function collide(g){
     if(d<m&&d>0.01){
       const k=(m-d)/d;
       if(o.hold&&o.stun<=0){p.x+=dx*k*0.5;p.y+=dy*k*0.5;o.x-=dx*k*0.5;o.y-=dy*k*0.5;o.bx-=dx*k*0.5;o.by-=dy*k*0.5;}
-      else{p.x+=dx*k;p.y+=dy*k;}
     }
   }
   for(let i=0;i<n;i++)for(let j=i+1;j<n;j++){
@@ -478,7 +572,7 @@ function step(g,dt){
   g.t+=dt;
   if(g.ph!=='play')return;
   regen(g.snow,dt,g.players.length);
-  if(g.startT>0){g.startT-=dt;if(g.startT<=0)emit(g,{e:'go'});return;}
+  if(g.startT>0){g.startT-=dt;for(const p of g.players){p.pa=0;p.pb=0;}if(g.startT<=0)emit(g,{e:'go'});return;}
   g.tl-=dt;g.spotCd=Math.max(0,g.spotCd-dt);
   const ps=g.players,sn=g.snow,slope=g.mode===1;
   for(const p of ps){
@@ -512,7 +606,7 @@ function step(g,dt){
       }
     }else{
       const dx=p.bx-p.x,dy=p.by-p.y,dd=Math.hypot(dx,dy);
-      if(p.relT>0.35&&dd<r+6&&moving&&(mx*dx+my*dy)>0.3*dd){p.hold=true;p.parked=false;p.bvx=p.bvy=0;p.ang=Math.atan2(dy,dx);p.x=p.bx-Math.cos(p.ang)*(r+5);p.y=p.by-Math.sin(p.ang)*(r+5);clampP(p);}
+      if(p.relT>0.35&&dd<r+6&&(dd<3||(moving&&(mx*dx+my*dy)>0.3*dd))){p.hold=true;p.parked=false;p.bvx=p.bvy=0;p.ang=Math.atan2(dy,dx);p.x=p.bx-Math.cos(p.ang)*(r+5);p.y=p.by-Math.sin(p.ang)*(r+5);clampP(p);}
     }
     if(p.pa>0){p.pa=0;if(p.hold)dropBall(g,p);else if(p.pCd<=0)punch(g,p);}
     if(p.pb>0){p.pb=0;useItem(g,p,null);}
@@ -609,6 +703,7 @@ function step(g,dt){
     if(slope)order=ps.slice().sort((a,b)=>b.score-a.score||b.size-a.size||a.id-b.id);
     order.forEach((p,i)=>p.rank=i);
     g.ph='end';g.win=order[0].id;g.endT=g.t;g.tl=Math.max(0,g.tl);emit(g,{e:'win',id:g.win});
+    for(const p of ps){p.stun=0;p.inv=0;p.mx=p.my=0;emit(g,{e:'say',id:p.id,set:p.id===g.win?'win':'lose',k:(Math.random()*4)|0});}
   }else order.forEach((p,i)=>p.rank=i);
 }
 
@@ -616,7 +711,21 @@ function step(g,dt){
 let role='demo';              // demo | host | client
 let scene='title';            // title | lobby | game | result
 let G=null,V=null,me=-1,online=false,isHostUi=true;
-let roster=[],peer=null,hostConn=null,roomCode='',botCount=3,curMode=0,curSki=2;
+let roster=[],peer=null,hostConn=null,roomCode='',botCount=3,curMode=0,curSki=2,curLv=1,myPre=0,themeSel='now',curTheme='';
+try{const v=+localStorage.getItem('yk-lv');if(localStorage.getItem('yk-lv')!=null&&v>=0&&v<=2)curLv=v;const q=+localStorage.getItem('yk-pre');if(q>=0&&q<=3)myPre=q;const t=localStorage.getItem('yk-theme');if(['now','rand','day','eve','night'].includes(t))themeSel=t;}catch(_){}
+const LINES={pre:['勝負だ！','かかってこい！','負けないよ！','雪だるまは渡さない！'],win:['やったー！','雪だるま完成！','楽勝だね！','みんな、ありがとう！'],lose:['くやしい！','次は勝つ！','もう一回！','やるじゃん…']};
+let says={};
+const THEME={
+  day:{sky:['#aecbe8','#bad3ec','#c8dcef','#d6e3f1','#e6e9f1','#f3ebec','#fbeee4'],sun:['#fff8e8','#ffffff',112,38,8],far:['#a9bbd9','#f4f8fc','#dbe5f2'],near:['#8fa6ca','#e9f0f8','#cddbec'],stars:0,ov:null},
+  eve:{sky:['#5d68a4','#7b76ab','#a081a6','#c78d96','#e09b85','#efae79','#f6c17b'],sun:['#ffc46e','#ffe2a0',150,50,11],far:['#9785ab','#f7dcd6','#dcbfc7'],near:['#776895','#efd0cf','#d2b4c0'],stars:0,ov:'rgba(255,140,80,0.11)'},
+  night:{sky:['#0a1430','#0e1a3a','#122244','#172a4f','#1c325a','#223a64','#28426e'],sun:['#ece9cf','#faf8ea',66,20,7],far:['#2f4068','#c2cee4','#9fb0cf'],near:['#263557','#b3c2dc','#8fa2c4'],stars:110,ov:'rgba(18,28,78,0.36)'}
+};
+function resolveTheme(forMatch){
+  if(themeSel==='now'){const h=new Date().getHours();return h>=6&&h<16?'day':h>=16&&h<19?'eve':'night';}
+  if(themeSel==='rand')return forMatch||!curTheme?['day','eve','night'][(Math.random()*3)|0]:curTheme;
+  return themeSel;
+}
+function applyTheme(t){if(!THEME[t])t='day';if(t===curTheme)return;curTheme=t;drawBg();drawBg2();}
 try{const k=+localStorage.getItem('yk-ski');if(localStorage.getItem('yk-ski')!=null&&k>=0&&k<=3)curSki=k;}catch(_){}
 try{curMode=localStorage.getItem('yk-mode')==='1'?1:0;}catch(_){}
 let prevS=null,curS=null,curAt=0,evOut=[];
@@ -693,8 +802,8 @@ function parseSeq(str){const out=[];let len=4;for(const t of String(str).trim().
 const NOTE_I={C:0,D:2,E:4,F:5,G:7,A:9,B:11};
 function nfreq(n){const m=/^([A-G])([#b]?)(-?\d)$/.exec(n);if(!m)return 0;const k=NOTE_I[m[1]]+(m[2]==='#'?1:m[2]==='b'?-1:0)+(+m[3]+1)*12;return 440*Math.pow(2,(k-69)/12);}
 const MUS={id:null,song:null,ch:[],nodes:new Set(),gain:null,pw:{},noise:null,hold:0};
-let bgmSel='auto',matchSong='jingle';
-try{const b=localStorage.getItem('yk-bgm');if(b&&(b==='auto'||b==='off'||SONGS[b]))bgmSel=b;}catch(_){}
+let bgmBattle='auto',bgmMenu='auto',matchSong='jingle';
+try{const ok=v=>v&&(v==='auto'||v==='off'||SONGS[v]);const b=localStorage.getItem('yk-bgm');if(ok(b))bgmBattle=b;const m=localStorage.getItem('yk-bgm-menu');if(ok(m))bgmMenu=m;}catch(_){}
 function pickBattle(){const ids=SONG_ORDER.filter(k=>SONGS[k].battle);return ids[(Math.random()*ids.length)|0];}
 function audioUnlock(){
   try{AC=AC||new(window.AudioContext||window.webkitAudioContext)();if(AC.state==='suspended')AC.resume();}catch(_){return false;}
@@ -754,11 +863,11 @@ function musTick(){
   }
 }
 function wantSong(){
-  if(bgmSel==='off'||performance.now()<MUS.hold)return null;
-  const sel=SONGS[bgmSel];
-  if(scene==='game'||scene==='ending')return bgmSel==='auto'?matchSong:bgmSel;
-  if(sel&&!sel.battle)return bgmSel;
-  return scene==='result'?'silent':'yado';
+  if(performance.now()<MUS.hold)return null;
+  if(scene==='game'||scene==='ending'){if(bgmBattle==='off')return null;return bgmBattle==='auto'?matchSong:bgmBattle;}
+  if(bgmMenu==='off')return null;
+  if(bgmMenu==='auto')return scene==='result'?'silent':'yado';
+  return bgmMenu;
 }
 function musUpdate(){
   if(!AC||!MUS.gain)return;
@@ -816,6 +925,7 @@ function fx(e){
     case'bonk':shake=Math.max(shake,0.15);burst(e.x,e.y-4,10,'#ffffff',44,0.45);if(!demo)sfx('bonk');break;
     case'thud':burst(e.x,e.y,6,'#e3ebf5',26,0.35);break;
     case'skiWarn':if(!demo){banner('スキー客がつっこんでくる！',1.5);sfx('warn');}break;
+    case'say':{if(demo)break;const L=LINES[e.set];if(L&&L[e.k]!=null)says[e.id]={txt:L[e.k],t:e.set==='pre'?3.4:9};break;}
     case'toyDie':burst(e.x,e.y,8,'#3fae6b',26,0.4);break;
     case'win':{const p=P[e.id];for(let i=0;i<40;i++)parts.push({x:p.bx+rnd(-30,30),y:p.by-40+rnd(-20,10),vx:rnd(-20,20),vy:rnd(-40,-5),l:rnd(1,2.2),col:COL[(Math.random()*6)|0].m,g:50});if(role!=='demo'){MUS.hold=performance.now()+2600;musStop();}sfx('win');break;}
   }
@@ -828,6 +938,7 @@ function updFx(dt){
   for(const b of banners)b.d-=dt;banners=banners.filter(b=>b.d>0);
   for(const b of bolts)b.t-=dt;bolts=bolts.filter(b=>b.t>0);
   for(const f of floats)f.t+=dt;floats=floats.filter(f=>f.t<1.2);
+  for(const id in says){says[id].t-=dt;if(says[id].t<=0)delete says[id];}
   shake=Math.max(0,shake-dt);flash=Math.max(0,flash-dt);
   for(const f of flakes){f.y+=f.s*dt*f.z;f.x+=Math.sin(f.w+=dt*1.3)*8*dt;if(f.y>H){f.y=-2;f.x=Math.random()*W;}}
   if(V){
@@ -841,7 +952,7 @@ const cv=$('cv'),X=cv.getContext('2d');
 const off=document.createElement('canvas');off.width=W;off.height=H;const c=off.getContext('2d');
 const dark=document.createElement('canvas');dark.width=W;dark.height=H;const dc=dark.getContext('2d');
 const bg=document.createElement('canvas');bg.width=W;bg.height=H;
-let S=1,texts=[];
+let S=1,texts=[],bubbleQ=[];
 const R=(x,y,w,h,col)=>{c.fillStyle=col;c.fillRect(Math.round(x),Math.round(y),w,h);};
 function disc(F,cx,cy,r,col){cx=Math.round(cx);cy=Math.round(cy);const m=Math.floor(r);for(let dy=-m;dy<=m;dy++){const w=Math.floor(Math.sqrt(r*r-dy*dy)+0.5);F(cx-w,cy+dy,2*w+1,1,col);}}
 const T=(s,x,y,size,col,al,ol)=>texts.push([s,x,y,size,col,al||'center',ol]);
@@ -859,12 +970,12 @@ const ICON={
 function icon(F,name,x,y,s){const d=ICON[name];for(let j=0;j<8;j++)for(let i=0;i<8;i++){const ch=d[j][i];if(ch!=='.')F(x+i*s,y+j*s,s,s,IPAL[ch]);}}
 function mul(seed){return()=>{seed|=0;seed=seed+0x6D2B79F5|0;let t=Math.imul(seed^seed>>>15,1|seed);t=t+Math.imul(t^t>>>7,61|t)^t;return((t^t>>>14)>>>0)/4294967296;};}
 function drawBg(){
-  const b=bg.getContext('2d'),rr=mul(11);
+  const b=bg.getContext('2d'),rr=mul(11),th=THEME[curTheme]||THEME.day,sky=th.sky;b.clearRect(0,0,W,H);
   const F=(x,y,w,h,col)=>{b.fillStyle=col;b.fillRect(Math.round(x),Math.round(y),w,h);};
-  const sky=['#aecbe8','#bad3ec','#c8dcef','#d6e3f1','#e6e9f1','#f3ebec','#fbeee4'];
   sky.forEach((col,i)=>F(0,i*9,W,9,col));
   for(let i=1;i<sky.length;i++)for(let x=0;x<W;x+=2)F(x+(i%2),i*9-1,1,1,sky[i]);
-  disc(F,112,38,8,'#fff8e8');disc(F,112,38,6,'#ffffff');
+  if(th.stars){const sr=mul(3);for(let i=0;i<th.stars;i++)F((sr()*W)|0,(sr()*54)|0,1,1,sr()<0.3?'#ffffff':'#8fa3cf');}
+  {const sn=th.sun;disc(F,sn[2],sn[3],sn[4],sn[0]);disc(F,sn[2],sn[3],sn[4]-2,sn[1]);if(curTheme==='night'){F(sn[2]-2,sn[3]-2,2,2,'#d6d2b6');F(sn[2]+2,sn[3]+1,2,1,'#d6d2b6');}}
   const mtn=(peaks,base,body,cap,shade,jag)=>{
     for(let x=0;x<W;x++){
       let y=base,top=base;
@@ -878,8 +989,8 @@ function drawBg(){
       if(x>px&&capH>1)F(x,y+1,1,Math.min(capH-1,base-y-1),shade);
     }
   };
-  mtn([[40,16,0.75],[150,8,0.62],[262,20,0.8],[350,12,0.7]],60,'#a9bbd9','#f4f8fc','#dbe5f2',0.8);
-  mtn([[-10,34,0.6],[92,30,0.7],[210,36,0.75],[318,31,0.72],[395,36,0.6]],60,'#8fa6ca','#e9f0f8','#cddbec',0.6);
+  mtn([[40,16,0.75],[150,8,0.62],[262,20,0.8],[350,12,0.7]],60,th.far[0],th.far[1],th.far[2],0.8);
+  mtn([[-10,34,0.6],[92,30,0.7],[210,36,0.75],[318,31,0.72],[395,36,0.6]],60,th.near[0],th.near[1],th.near[2],0.6);
   // ski lift
   for(let x=0;x<=150;x++)F(x,46-x*0.2,1,1,'#4b5d80');
   [[30,40],[90,28],[150,16]].forEach(p=>{F(p[0],p[1],1,60-p[1],'#4b5d80');F(p[0]-2,p[1],5,1,'#4b5d80');});
@@ -922,14 +1033,14 @@ function drawBg(){
 const bg2=document.createElement('canvas');bg2.width=W;bg2.height=H;
 const over2=document.createElement('canvas');over2.width=W;over2.height=H;
 function drawBg2(){
-  const b=bg2.getContext('2d'),rr=mul(5);b.drawImage(bg,0,0);
+  const b=bg2.getContext('2d'),rr=mul(5);b.clearRect(0,0,W,H);b.drawImage(bg,0,0);
   const F=(x,y,w,h,col)=>{b.fillStyle=col;b.fillRect(Math.round(x),Math.round(y),w,h);};
   // the higher, the icier
   for(let y=62;y<H-8;y++){const t=(y-62)/(H-70);F(3,y,W-6,1,'rgba(118,152,204,'+(0.24*(1-t)*(1-t)).toFixed(3)+')');}
   for(let k=0;k<6;k++){const y0=88+k*21;for(let x=4;x<W-4;x++){if((x+k*5)%4===0)continue;F(x,y0+Math.round(Math.sin(x*0.017+k*1.3)*3),1,1,'rgba(140,168,210,.5)');}}
   // deep drifts at the bottom
   for(let i=0;i<34;i++){const x=8+rr()*(W-30),y=172+rr()*32,w=7+rr()*12;F(x,y,w,1,'#ffffff');F(x+1,y+1,Math.max(1,w-2),1,'#e1e9f4');}
-  const o=over2.getContext('2d');
+  const o=over2.getContext('2d');o.clearRect(0,0,W,H);
   const O=(x,y,w,h,col)=>{o.fillStyle=col;o.fillRect(Math.round(x),Math.round(y),w,h);};
   // goal line and flags
   for(let x=FX0-4;x<FX1+4;x+=3){const k=((x/3)|0)%2;O(x,GOAL_Y+2,3,2,k?'#d9534f':'#ffffff');O(x,GOAL_Y+4,3,1,k?'#ffffff':'#d9534f');}
@@ -960,6 +1071,14 @@ function drawBackAnim(t){
   // lift chairs
   for(let i=0;i<4;i++){const k=((t*0.03+i*0.25)%1),x=k*150,y=46-x*0.2;R(x,y+1,1,3,'#4b5d80');R(x-2,y+4,5,1,'#d9534f');R(x-2,y+5,1,2,'#4b5d80');R(x+2,y+5,1,2,'#4b5d80');}
 }
+function drawWindows(t){
+  const lx=236;
+  [10,20,44,54].forEach((dx,i)=>{const f=Math.sin(t*3+i*1.7)>0.92?'#f2b450':'#f8c868';R(lx+dx,50,6,6,f);R(lx+dx+2,50,1,6,'#4e2f22');R(lx+dx,52,6,1,'#4e2f22');R(lx+dx,50,2,2,'#fde6ae');});
+  R(lx+34,37,3,3,'#f8c868');R(lx+33,53,2,2,'#f8c868');R(38,52,4,4,'#f8c868');
+  c.globalAlpha=0.16;for(const dx of[10,20,44,54])disc(R,lx+dx+3,54,8,'#f8c868');disc(R,40,54,6,'#f8c868');c.globalAlpha=1;
+  const cols=['#f4b860','#d9534f','#3fae6b','#3f7fd6'];
+  for(let i=1;i<7;i++){const k=i/7,x=214+k*22,y=46+Math.sin(k*Math.PI)*3;R(x,y+1,1,1,(Math.floor(t*2)+i)%4===0?'#ffffff':cols[i%4]);}
+}
 function drawTrails(sn){
   for(let cy=0;cy<GH;cy++)for(let cx=0;cx<GW;cx++){
     const v=sn[cy*GW+cx];if(v>=0.86)continue;
@@ -989,25 +1108,27 @@ function drawSnowman(bx,by,r,col,t){
   R(bx-r-6,by-r*1.1,7,1,'#5a3a2d');R(bx+r,by-r*1.1,7,1,'#5a3a2d');
   R(bx-1,by-r*0.9,2,2,'#22304a');R(bx-1,by-r*0.4,2,2,'#22304a');
 }
-const BODY=['...ww...','..HHHH..','.HHHHHH.','.wwwwww.','F','.ssssss.','mJJJJJJm','mJJJJJJm','.JJJJJJ.','L1','L2'];
+const MOUTH={n:'.ssssss.',happy:'.psrrsp.',sad:'.scsscs.'};
+const BODY=['...ww...','..HHHH..','.HHHHHH.','.wwwwww.','F','M','mJJJJJJm','mJJJJJJm','.JJJJJJ.','L1','L2'];
 const FACE={d:'.skssks.',l:'.ksksss.',r:'.sssksk.',u:'.HHHHHH.'};
 const LEGS=[['.PP..PP.','.bb..bb.'],['..PP.PP.','..bb..bb'],['.PP..PP.','.bb..bb.'],['.PP.PP..','bb..bb..']];
 function drawPlayer(p,t){
-  const col=COL[p.color],pal={w:'#ffffff',H:col.m,s:'#f6d2b0',k:'#22304a',J:col.d,m:col.m,P:'#33415c',b:'#22304a'};
-  const x=Math.round(p.x),y=Math.round(p.y);
+  const col=COL[p.color],pal={w:'#ffffff',H:col.m,s:'#f6d2b0',k:'#22304a',J:col.d,m:col.m,P:'#33415c',b:'#22304a',r:'#c0392b',p:'#f2a1a8',c:'#7cc4ec'};
+  const mood=V&&V.ph==='end'&&role!=='demo'?(p.id===V.win?'happy':'sad'):null;
+  const x=Math.round(p.x),y=Math.round(p.y)-(mood==='happy'?Math.round(Math.abs(Math.sin(t*9))*3):0);
   if(p.inv&&!p.stun&&Math.floor(t*12)%2)return;
   R(x-3,y,7,1,'rgba(100,128,172,.4)');
   const ax=Math.cos(p.ang),ay=Math.sin(p.ang);
-  const f=Math.abs(ay)>Math.abs(ax)*1.2?(ay<0?'u':'d'):(ax<0?'l':'r');
+  const f=mood?'d':Math.abs(ay)>Math.abs(ax)*1.2?(ay<0?'u':'d'):(ax<0?'l':'r');
   const lg=LEGS[Math.floor(p.walk/4)%4];
   if(p.stun>0){
-    for(let j=0;j<11;j++){let row=BODY[j];if(row==='F')row=FACE.d;else if(row==='L1')row=LEGS[0][0];else if(row==='L2')row=LEGS[0][1];
+    for(let j=0;j<11;j++){let row=BODY[j];if(row==='F')row=FACE.d;else if(row==='M')row=MOUTH.n;else if(row==='L1')row=LEGS[0][0];else if(row==='L2')row=LEGS[0][1];
       for(let i=0;i<8;i++){const ch=row[i];if(ch!=='.')R(x-6+j,y-7+i,1,1,ch==='k'?'#22304a':pal[ch]);}}
     for(let k=0;k<3;k++){const a=t*6+k*2.1;R(x+Math.cos(a)*6,y-11+Math.sin(a)*2,1,1,'#f4b860');R(x+Math.cos(a)*6,y-12+Math.sin(a)*2,1,1,'#fff3c4');}
     return;
   }
   if(p.boost>0){R(x-5,y,4,1,'#d9534f');R(x+1,y,5,1,'#d9534f');}
-  for(let j=0;j<11;j++){let row=BODY[j];if(row==='F')row=FACE[f];else if(row==='L1')row=lg[0];else if(row==='L2')row=lg[1];
+  for(let j=0;j<11;j++){let row=BODY[j];if(row==='F')row=FACE[f];else if(row==='M')row=MOUTH[mood||'n'];else if(row==='L1')row=mood?LEGS[0][0]:lg[0];else if(row==='L2')row=mood?LEGS[0][1]:lg[1];
     for(let i=0;i<8;i++){const ch=row[i];if(ch!=='.')R(x-4+i,y-11+j,1,1,pal[ch]);}}
   if(p.hold){R(x+ax*4-1,y-5+ay*2,2,2,col.m);R(x+ax*5+ay*2-1,y-5+ay*3,2,2,col.m);}
   if(p.pT>0){R(x+ax*7-1,y-6+ay*6,3,3,col.m);R(x+ax*4-1,y-5+ay*4,2,2,col.d);}
@@ -1019,7 +1140,7 @@ function drawToy(t,time){
   R(x-1,y-6,2,1,'#8d99ad');R(x-2+Math.floor(time*8)%3,y-7,2,1,'#8d99ad');
 }
 function draw(time){
-  texts=[];
+  texts=[];bubbleQ=[];
   const P=V.players,spot=V.spot;
   c.drawImage(V.mode===1?bg2:bg,0,0);drawBackAnim(time);drawTrails(V.snow);if(V.mode===1)c.drawImage(over2,0,0);
   // ground decals
@@ -1068,6 +1189,7 @@ function draw(time){
     else{const n=Math.ceil(dist(l.x1,l.y1,l.x2,l.y2)/2);for(let k=0;k<=n;k++)R(lerp(l.x1,l.x2,k/n),lerp(l.y1,l.y2,k/n)-5,1,1,k%2?'#33415c':'#8d99ad');R(l.x2-1,l.y2-6,3,3,'#33415c');}
   }
   for(const p of parts)R(p.x,p.y,p.l>0.25?2:1,p.l>0.25?2:1,p.col);
+  {const th=THEME[curTheme];if(th&&th.ov){c.fillStyle=th.ov;c.fillRect(0,0,W,H);drawWindows(time);}}
   // held items and names
   for(const p of P){
     const pop=pops.find(q=>q.id===p.id);
@@ -1077,7 +1199,7 @@ function draw(time){
       const w0=Math.max(2,Math.round(Math.max(p.stun0,p.stun)*STUN_PX)),w=clamp(Math.round(p.stun*STUN_PX),1,w0),x0=Math.round(p.x-w0/2);
       R(x0-1,p.y-17,w0+2,4,'#22304a');R(x0,p.y-16,w0,2,'#f3f7fb');R(x0,p.y-16,w,2,'#f08a3c');
     }
-    if(role!=='demo'){const ny=p.stun>0?p.y-19:p.item?p.y-25:p.y-14;T((p.id===me?'▼':'')+p.name,p.x,ny,6,p.id===me?COL[p.color].d:'#3c4d6e','center','#ffffff');}
+    if(role!=='demo'){const ny=p.stun>0?p.y-19:p.item?p.y-25:p.y-14;T((p.id===me?'▼':'')+p.name,p.x,ny,6,p.id===me?COL[p.color].d:'#3c4d6e','center','#ffffff');if(says[p.id])bubbleQ.push([says[p.id].txt,p.x,ny-8,COL[p.color].d]);}
   }
   // spotlight darkness
   if(spot){
@@ -1111,6 +1233,13 @@ function draw(time){
     X.font=Math.max(8,Math.round(t[3]*S))+'px DotGothic16, monospace';X.textAlign=t[5];
     if(t[6]){X.lineWidth=Math.max(2,S*1.2);X.strokeStyle=t[6];X.strokeText(t[0],t[1]*S,t[2]*S);}
     X.fillStyle=t[4];X.fillText(t[0],t[1]*S,t[2]*S);
+  }
+  for(const q of bubbleQ){
+    const fs=Math.max(10,Math.round(7*S)),pad=Math.round(Math.max(4,3*S));X.font=fs+'px DotGothic16, monospace';
+    const tw=X.measureText(q[0]).width,bw=tw+pad*2,bh=fs+pad*1.4,ax=q[1]*S,bx=clamp(ax-bw/2,4,cv.width-bw-4),by=Math.max(4,q[2]*S-bh);
+    X.fillStyle='#ffffff';X.fillRect(bx,by,bw,bh);X.lineWidth=Math.max(2,Math.round(S*0.8));X.strokeStyle=q[3];X.strokeRect(bx,by,bw,bh);
+    X.beginPath();X.moveTo(ax-4*S/2,by+bh);X.lineTo(ax,by+bh+3*S);X.lineTo(ax+4*S/2,by+bh);X.closePath();X.fillStyle='#ffffff';X.fill();X.stroke();X.fillRect(ax-4*S/2+1,by+bh-2,4*S-2,3);
+    X.fillStyle='#22304a';X.textAlign='left';X.textBaseline='middle';X.fillText(q[0],bx+pad,by+bh/2+1);X.textBaseline='alphabetic';
   }
 }
 function mark(x,y,r,col){[[-1,-1],[1,-1],[-1,1],[1,1]].forEach(d=>{R(x+d[0]*r-1,y+d[1]*r,3,1,col);R(x+d[0]*r,y+d[1]*r-1,1,3,col);});}
@@ -1150,10 +1279,10 @@ function drawHud(time){
     R(x0+7,y0,bw+2,7,'#22304a');R(x0+8,y0+1,bw,5,'#f3f7fb');R(x0+8,y0+1,fw,5,col.m);
     if(slope){const cw2=Math.min(bw-fw,Math.round(bw*p.size/GOAL));if(cw2>0){c.globalAlpha=0.4;R(x0+8+fw,y0+1,cw2,5,col.m);c.globalAlpha=1;}}
     R(x0+9+bw,y0-2,1,9,'#22304a');R(x0+10+bw,y0-2,3,3,'#d9534f');
-    T(String(Math.floor(val)),x0+14+bw,y0+7,7,'#22304a','left');
+    T(String(Math.floor(val)),x0+14+bw,y0+7,7,'#22304a','left','#ffffff');
     if(i===me)R(x0,y0+9,bw+9,1,'#22304a');
   });
-  const tl=Math.max(0,Math.ceil(V.tl));T(Math.floor(tl/60)+':'+String(tl%60).padStart(2,'0'),W-4,11,8,tl<=20?'#d9534f':'#22304a','right');
+  const tl=Math.max(0,Math.ceil(V.tl));T(Math.floor(tl/60)+':'+String(tl%60).padStart(2,'0'),W-4,11,8,tl<=20?'#d9534f':'#22304a','right','#ffffff');
   if(my){
     const bx=4,by=H-27;R(bx,by,22,22,'#22304a');R(bx+1,by+1,20,20,'#f3f7fb');
     if(my.item){icon(R,my.item,bx+3,by+3,2);T(ITEMS[my.item].n,bx+26,by+10,7,'#22304a','left','#ffffff');if(!aimTxt)T(isTouch?'道具ボタン 長押しで狙う':keyName(KEYS.b[0])+' 長押しで狙う・離して使う',bx+26,by+19,6,'#4a5f85','left','#ffffff');}
@@ -1286,15 +1415,17 @@ function rebuildRoster(){
 }
 function listOf(){return roster.map(r=>({name:r.name,color:r.color,bot:r.bot}));}
 function renderModes(){
-  for(const k of['t','l'])for(const m of[0,1]){const b=$('m-'+k+m);b.setAttribute('aria-pressed',String(curMode===m));if(k==='l')b.disabled=!isHostUi;}
-  for(const k of['t','l']){const sel=$('ski-'+k);sel.value=String(curSki);if(k==='l')sel.disabled=!isHostUi;}
-  $('md-t').textContent=$('md-l').textContent=MODES[curMode].d;
+  for(const m of[0,1]){const b=$('m-l'+m);b.setAttribute('aria-pressed',String(curMode===m));b.disabled=!isHostUi;}
+  $('ski-l').value=String(curSki);$('ski-l').disabled=!isHostUi;
+  $('lv-l').value=String(curLv);$('lv-l').disabled=!isHostUi;
+  $('md-l').textContent=MODES[curMode].d;
+  for(const b of $('pre-chips').children)b.setAttribute('aria-pressed',String(+b.dataset.k===myPre));
 }
 function setMode(m){
-  if(m===curMode)return;
+  if(m===curMode||!isHostUi)return;
   curMode=m;try{localStorage.setItem('yk-mode',String(m));}catch(_){}
   renderModes();if(role==='demo')startDemo();
-  if(scene==='lobby'&&isHostUi&&online)broadcastLobby();
+  if(scene==='lobby'&&online)broadcastLobby();
 }
 function renderLobby(list,you,host){
   const ul=$('members');ul.textContent='';
@@ -1304,25 +1435,32 @@ function renderLobby(list,you,host){
     nm.textContent=r.name+(r.bot?'（ボット）':i===you?'（あなた）':i===0?'（ホスト）':'');
     li.append(sw,nm);ul.append(li);
   });
+  $('codebox').hidden=!roomCode;$('lobbytitle').hidden=!!roomCode;
   $('lobbycode').textContent=roomCode||'----';
-  $('botrow').hidden=!host;$('b-start').hidden=!host;$('copyrow').hidden=!roomCode;
+  $('b-botm').hidden=$('b-botp').hidden=!host;$('b-start').hidden=!host;
   $('botn').textContent=String(list.filter(r=>r.bot).length);
-  $('lobbynote').textContent=host?'コードを伝えて、そろったら「はじめる」。最大6人。':'ホストが始めるのを待っています。';
+  $('lobbynote').textContent=!host?'ホストが始めるのを待っています。':roomCode?'コードを伝えて、そろったら「はじめる」。最大6人。':'ボットの数と強さを決めて「はじめる」。';
   renderModes();
 }
 function broadcastLobby(){
   rebuildRoster();const list=listOf();
-  roster.forEach((r,i)=>{if(r.conn&&r.conn.open)r.conn.send({t:'lobby',list,you:i,code:roomCode,mode:curMode,ski:curSki});});
+  roster.forEach((r,i)=>{if(r.conn&&r.conn.open)r.conn.send({t:'lobby',list,you:i,code:roomCode,mode:curMode,ski:curSki,lv:curLv});});
   renderLobby(list,0,true);
 }
 function openLobby(){scene='lobby';isHostUi=true;show('p-lobby');chipText();broadcastLobby();}
 function beginHostGame(){
   rebuildRoster();const list=listOf();
   roster.forEach(r=>{r.la=r.lb=0;});
-  G=newGame(list,curMode,curSki);V=G;matchSong=pickBattle();role='host';me=0;scene='game';acc=0;evOut=[];parts=[];pops=[];lines=[];banners=[];bolts=[];floats=[];
-  inp.a=inp.b=0;
+  if(roster[0]&&!roster[0].bot)roster[0].pre=myPre;
+  G=newGame(list,curMode,curSki,curLv);V=G;matchSong=pickBattle();role='host';me=0;scene='game';acc=0;evOut=[];parts=[];pops=[];lines=[];banners=[];bolts=[];floats=[];says={};
+  inp.a=inp.b=0;applyTheme(resolveTheme(true));
+  roster.forEach((r,i)=>G.ev.push({e:'say',id:i,set:'pre',k:r.bot?(Math.random()*4)|0:(r.pre|0)}));
   roster.forEach((r,i)=>{if(r.conn&&r.conn.open)r.conn.send({t:'start',list,you:i,mode:curMode});});
   show(null);banner(curMode===1?'育てて、頂上の旗まで運べ！':'雪玉を100%まで育てろ！',2.6);if(document.activeElement&&document.activeElement.blur)document.activeElement.blur();
+}
+function sayLine(set,k){
+  if(role==='host'){const e={e:'say',id:me,set,k};fx(e);if(online)evOut.push(e);}
+  else if(role==='client'&&hostConn&&hostConn.open)hostConn.send({t:'say',k});
 }
 function showResult(){
   scene='result';
@@ -1334,15 +1472,18 @@ function showResult(){
   });
   const w=V.players[V.win];
   $('res-title').textContent=w?(w.id===me?'あなたの勝ち！':w.name+' の勝ち'):'けっか';
+  const set=V.win===me?'win':'lose',box=$('say-chips');box.textContent='';
+  LINES[set].forEach((t,k)=>{const b=document.createElement('button');b.type='button';b.className='sm';b.textContent=t;b.setAttribute('aria-pressed','false');
+    b.onclick=()=>{sayLine(set,k);for(const x of box.children)x.setAttribute('aria-pressed',String(x===b));};box.append(b);});
   const host=role==='host';
   $('b-again').hidden=!host;
-  $('b-back').textContent=host?(online?'ロビーへ':'タイトルへ'):'抜ける';
+  $('b-back').textContent=host?'もどる':'抜ける';
   $('res-note').textContent=host?'':'ホストが次を決めるのを待っています。';
   show('p-result');
 }
 function leave(msg){
   try{if(peer)peer.destroy();}catch(_){}
-  peer=null;hostConn=null;lastHost=0;online=false;roomCode='';roster=[];prevS=curS=null;scene='title';isHostUi=true;renderModes();
+  peer=null;hostConn=null;lastHost=0;online=false;roomCode='';roster=[];prevS=curS=null;scene='title';isHostUi=true;says={};renderModes();
   startDemo();show('p-title');chipText();setMsg(msg||'');
 }
 function netFail(){
@@ -1357,7 +1498,7 @@ function hostRoom(){
   try{pr=new Peer(PFX+roomCode,peerOpts());}catch(_){netFail();return;}
   peer=pr;
   const to=setTimeout(()=>{if(!ok&&peer===pr)netFail();},10000);
-  pr.on('open',()=>{ok=true;clearTimeout(to);online=true;roster=[{name:getName(),bot:false,conn:null,la:0,lb:0}];botCount=0;setMsg('');openLobby();});
+  pr.on('open',()=>{ok=true;clearTimeout(to);online=true;roster=[{name:getName(),bot:false,conn:null,la:0,lb:0,pre:myPre}];botCount=0;setMsg('');openLobby();});
   pr.on('error',err=>{
     if(peer!==pr)return;
     if(!ok){clearTimeout(to);if(err&&err.type==='unavailable-id'){try{pr.destroy();}catch(_){}hostRoom();}else netFail();}
@@ -1379,12 +1520,15 @@ function hostData(cn,d){
     if(scene!=='lobby'||humans>=6){cn.send({t:'no',why:scene!=='lobby'?'いま対戦中。終わってからもう一度入ってね。':'満員です。'});setTimeout(()=>{try{cn.close();}catch(_){}},400);return;}
     const nm=String(d.name||'').replace(/[\u0000-\u001f]/g,'').slice(0,8)||'プレイヤー';
     const bots=roster.filter(r=>r.bot),hs=roster.filter(r=>!r.bot);
-    hs.push({name:nm,bot:false,conn:cn,la:0,lb:0,last:performance.now()});roster=hs.concat(bots);
+    hs.push({name:nm,bot:false,conn:cn,la:0,lb:0,last:performance.now(),pre:clamp(d.pre|0,0,3)});roster=hs.concat(bots);
     broadcastLobby();
   }else if(d.t==='in'&&idx>=0&&role==='host'&&G&&scene==='game'){
     const r=roster[idx],p=G.players[idx];if(!p||p.bot)return;
     p.mx=clamp(+d.mx||0,-1,1);p.my=clamp(+d.my||0,-1,1);
     const da=(d.a|0)-r.la,db=(d.b|0)-r.lb;if(da>0&&da<6)p.pa+=da;if(db>0&&db<6)p.pb+=db;r.la=d.a|0;r.lb=d.b|0;
+  }else if(d.t==='pre'&&idx>=0){roster[idx].pre=clamp(d.k|0,0,3);
+  }else if(d.t==='say'&&idx>=0&&G&&G.ph==='end'){
+    const k=d.k|0;if(k<0||k>3)return;const e={e:'say',id:idx,set:G.win===idx?'win':'lose',k};fx(e);evOut.push(e);
   }
 }
 function hostDrop(cn){
@@ -1403,7 +1547,7 @@ function joinRoom(){
   const to=setTimeout(()=>{if(!ok&&peer===pr)leave('部屋につながらなかった。コードと、ホストが部屋を開いたままかを確認してね。');},12000);
   pr.on('open',()=>{
     const cn=pr.connect(PFX+cd,{reliable:true});hostConn=cn;
-    cn.on('open',()=>{ok=true;clearTimeout(to);roomCode=cd;online=true;lastHost=performance.now();cn.send({t:'hello',name:getName()});});
+    cn.on('open',()=>{ok=true;clearTimeout(to);roomCode=cd;online=true;lastHost=performance.now();cn.send({t:'hello',name:getName(),pre:myPre});});
     cn.on('data',clientData);
     cn.on('close',()=>{if(peer===pr)leave('ホストとの接続が切れた。');});
   });
@@ -1416,27 +1560,32 @@ function joinRoom(){
 function clientData(d){
   if(!d||typeof d!=='object')return;
   lastHost=performance.now();
-  if(d.t==='lobby'){const m=d.mode?1:0,ch=m!==curMode;curMode=m;if(d.ski>=0&&d.ski<=3)curSki=d.ski|0;scene='lobby';role='demo';if(ch||!G||G.players.length!==4||G.players.some(p=>!p.bot))startDemo();isHostUi=false;roomCode=d.code||roomCode;show('p-lobby');chipText();setMsg('');renderLobby(d.list,d.you,false);}
-  else if(d.t==='start'){role='client';G=null;curMode=d.mode?1:0;V=makeView(d.list,curMode);me=d.you;matchSong=pickBattle();prevS=curS=null;scene='game';inp.ca=inp.cb=0;parts=[];pops=[];lines=[];banners=[];bolts=[];floats=[];show(null);banner(curMode===1?'育てて、頂上の旗まで運べ！':'雪玉を100%まで育てろ！',2.6);}
+  if(d.t==='lobby'){const m=d.mode?1:0,ch=m!==curMode;curMode=m;if(d.ski>=0&&d.ski<=3)curSki=d.ski|0;if(d.lv>=0&&d.lv<=2)curLv=d.lv|0;scene='lobby';role='demo';if(ch||!G||G.players.length!==4||G.players.some(p=>!p.bot))startDemo();isHostUi=false;roomCode=d.code||roomCode;show('p-lobby');chipText();setMsg('');renderLobby(d.list,d.you,false);}
+  else if(d.t==='start'){role='client';G=null;curMode=d.mode?1:0;V=makeView(d.list,curMode);me=d.you;matchSong=pickBattle();says={};applyTheme(resolveTheme(true));prevS=curS=null;scene='game';inp.ca=inp.cb=0;parts=[];pops=[];lines=[];banners=[];bolts=[];floats=[];show(null);banner(curMode===1?'育てて、頂上の旗まで運べ！':'雪玉を100%まで育てろ！',2.6);}
   else if(d.t==='s'&&role==='client'&&V){prevS=curS;curS=d;curAt=performance.now();if(!prevS)buildView(curAt);for(const e of d.E)fx(e);if(d.ph==='end'&&scene==='game'){scene='ending';setTimeout(()=>{if(role==='client'&&scene==='ending')showResult();},2500);}}
   else if(d.t==='no'){leave(d.why||'入れなかった。');}
 }
-$('b-solo').onclick=()=>{online=false;roomCode='';roster=[{name:getName(),bot:false,conn:null,la:0,lb:0}];botCount=3;chipText();setMsg('');beginHostGame();};
+$('b-solo').onclick=()=>{online=false;roomCode='';roster=[{name:getName(),bot:false,conn:null,la:0,lb:0,pre:myPre}];botCount=3;chipText();setMsg('');openLobby();};
 $('b-host').onclick=hostRoom;
 $('b-join').onclick=joinRoom;
 $('code').addEventListener('keydown',e=>{if(e.key==='Enter')joinRoom();});
-for(const k of['t','l'])for(const m of[0,1])$('m-'+k+m).onclick=()=>setMode(m);
-for(const k of['t','l']){
-  const sel=$('ski-'+k);SKI.forEach((o,i)=>{const op=document.createElement('option');op.value=String(i);op.textContent=o.n;sel.append(op);});
-  sel.onchange=()=>{curSki=+sel.value;try{localStorage.setItem('yk-ski',String(curSki));}catch(_){}renderModes();if(role==='demo')startDemo();if(scene==='lobby'&&isHostUi&&online)broadcastLobby();};
-}
+for(const m of[0,1])$('m-l'+m).onclick=()=>setMode(m);
+(()=>{
+  const ski=$('ski-l');SKI.forEach((o,i)=>{const op=document.createElement('option');op.value=String(i);op.textContent=o.n;ski.append(op);});
+  ski.onchange=()=>{curSki=+ski.value;try{localStorage.setItem('yk-ski',String(curSki));}catch(_){}renderModes();if(role==='demo')startDemo();if(online)broadcastLobby();};
+  const lv=$('lv-l');BOTLVN.forEach((n,i)=>{const op=document.createElement('option');op.value=String(i);op.textContent=n;lv.append(op);});
+  lv.onchange=()=>{curLv=+lv.value;try{localStorage.setItem('yk-lv',String(curLv));}catch(_){}renderModes();if(online)broadcastLobby();};
+  const pc=$('pre-chips');LINES.pre.forEach((t,k)=>{const b=document.createElement('button');b.type='button';b.className='sm';b.dataset.k=String(k);b.textContent=t;
+    b.onclick=()=>{myPre=k;try{localStorage.setItem('yk-pre',String(k));}catch(_){}
+      if(isHostUi&&roster[0]&&!roster[0].bot)roster[0].pre=k;else if(hostConn&&hostConn.open)hostConn.send({t:'pre',k});renderModes();};pc.append(b);});
+})();
 $('b-botp').onclick=()=>{botCount++;broadcastLobby();};
 $('b-botm').onclick=()=>{botCount--;broadcastLobby();};
 $('b-start').onclick=()=>{if(roster.length>=2)beginHostGame();};
 $('b-leave').onclick=()=>leave('');
 $('b-again').onclick=()=>{if(role==='host')beginHostGame();};
 $('b-back').onclick=()=>{
-  if(role==='host'&&online){role='demo';startDemo();roster=roster.filter(r=>!r.left);openLobby();}
+  if(role==='host'){role='demo';says={};startDemo();roster=roster.filter(r=>!r.left);openLobby();}
   else leave('');
 };
 $('b-copy').onclick=()=>{
@@ -1444,9 +1593,6 @@ $('b-copy').onclick=()=>{
   try{navigator.clipboard.writeText(roomCode).then(done,()=>{$('copied').textContent='コードを書き写してね';});}catch(_){$('copied').textContent='コードを書き写してね';}
 };
 $('mute').onclick=()=>{muted=!muted;$('mute').textContent='音: '+(muted?'OFF':'ON');audioUnlock();};
-(()=>{const sel=$('bgm');const add=(v,t)=>{const o=document.createElement('option');o.value=v;o.textContent=t;sel.append(o);};
-  add('auto','おまかせ');for(const k of SONG_ORDER)add(k,SONGS[k].n);add('off','なし');sel.value=bgmSel;
-  sel.onchange=()=>{bgmSel=sel.value;try{localStorage.setItem('yk-bgm',bgmSel);}catch(_){}audioUnlock();if(scene==='game'&&bgmSel==='auto')matchSong=pickBattle();musUpdate();};})();
 const unlockOnce=()=>{audioUnlock();window.removeEventListener('pointerdown',unlockOnce);window.removeEventListener('keydown',unlockOnce);};
 window.addEventListener('pointerdown',unlockOnce);window.addEventListener('keydown',unlockOnce);
 
@@ -1461,7 +1607,7 @@ function readKeys(){
 }
 const DEFK={a:['KeyX','KeyF'],b:['Space','KeyE','Enter']};
 const MOVE=['ArrowLeft','ArrowRight','ArrowUp','ArrowDown','KeyW','KeyA','KeyS','KeyD'];
-let KEYS={a:DEFK.a.slice(),b:DEFK.b.slice()},rebind=null;
+let KEYS={a:DEFK.a.slice(),b:DEFK.b.slice()},rebind=null,rebindTimer=0,flashKey='',setOpen=false;
 try{const k=JSON.parse(localStorage.getItem('yk-keys'));if(k&&Array.isArray(k.a)&&Array.isArray(k.b)&&k.a.length&&k.b.length)KEYS={a:k.a.slice(0,3).map(String),b:k.b.slice(0,3).map(String)};}catch(_){}
 function keyName(c){
   let m;
@@ -1471,32 +1617,61 @@ function keyName(c){
   if((m=/^(Shift|Control|Alt|Meta)(Left|Right)$/.exec(c)))return(m[2]==='Left'?'左':'右')+({Shift:'Shift',Control:'Ctrl',Alt:'Alt',Meta:'Win'})[m[1]];
   return c;
 }
+function kbd(t,cls){const k=document.createElement('kbd');k.textContent=t;if(cls)k.className=cls;return k;}
 function renderKeys(){
   for(const act of['a','b']){
-    const dt=$('k-'+act);dt.textContent='';
-    KEYS[act].forEach((k,i)=>{if(i)dt.append(' / ');const kb=document.createElement('kbd');kb.textContent=keyName(k);dt.append(kb);});
-    dt.append(' / ');const mk=document.createElement('kbd');mk.textContent=act==='a'?'左クリック':'右クリック';dt.append(mk);
-    $('rb-'+act).textContent=rebind===act?'キーを押して…（Escでやめる）':'「'+(act==='a'?'手':'道具')+'」のキーを変える';
+    const box=$('ksk-'+act),btn=$('rb-'+act),g=$('gk-'+act),mouse=act==='a'?'左クリック':'右クリック';
+    $('ks-'+act).classList.toggle('listen',rebind===act);box.textContent='';
+    if(rebind===act){const sp=document.createElement('span');sp.className='listen-box';sp.textContent='使いたいキーを押してね（Escでやめる）';box.append(sp);btn.textContent='やめる';}
+    else{for(const k of KEYS[act])box.append(kbd(keyName(k),flashKey===act+k?'new':''));box.append(kbd(mouse));btn.textContent='変える';}
+    g.textContent='';for(const k of KEYS[act])g.append(kbd(keyName(k)));g.append(kbd(mouse));if(isTouch)g.append(kbd(act==='a'?'手ボタン':'道具ボタン'));
   }
 }
 function saveKeys(){try{localStorage.setItem('yk-keys',JSON.stringify(KEYS));}catch(_){}}
+function setRebind(act){
+  rebind=act;clearTimeout(rebindTimer);
+  if(act){$('keymsg').textContent='';rebindTimer=setTimeout(()=>{if(rebind){rebind=null;$('keymsg').textContent='時間切れ。もう一度「変える」を押してね。';renderKeys();}},10000);}
+  renderKeys();
+}
 function aimStart(src){if(!inp.aim){inp.aim=true;aimBy=src;}}
 function aimEnd(src,fire){if(!inp.aim||(src&&aimBy!==src))return;inp.aim=false;aimBy=null;if(fire)pressB();}
-$('rb-a').onclick=()=>{rebind=rebind==='a'?null:'a';$('keymsg').textContent='';renderKeys();};
-$('rb-b').onclick=()=>{rebind=rebind==='b'?null:'b';$('keymsg').textContent='';renderKeys();};
-$('rb-reset').onclick=()=>{KEYS={a:DEFK.a.slice(),b:DEFK.b.slice()};rebind=null;saveKeys();$('keymsg').textContent='初期設定にもどした。';renderKeys();};
+$('rb-a').onclick=()=>setRebind(rebind==='a'?null:'a');
+$('rb-b').onclick=()=>setRebind(rebind==='b'?null:'b');
+$('rb-reset').onclick=()=>{KEYS={a:DEFK.a.slice(),b:DEFK.b.slice()};flashKey='';saveKeys();setRebind(null);$('keymsg').textContent='初期設定（手：X・F、道具：Space・E・Enter）にもどしたよ。';};
+function openSettings(toKeys){
+  $('settings').hidden=false;setOpen=true;for(const k in keys)keys[k]=false;readKeys();aimEnd(null,false);
+  try{(toKeys?$('rb-a'):$('bgm-battle')).focus();}catch(_){}
+}
+function closeSettings(){$('settings').hidden=true;setOpen=false;setRebind(null);try{$('open-set').focus();}catch(_){}}
+$('open-set').onclick=()=>openSettings(false);
+$('open-keys').onclick=()=>openSettings(true);
+$('set-close').onclick=closeSettings;
+$('settings').addEventListener('pointerdown',e=>{if(e.target===$('settings'))closeSettings();else if(rebind&&!e.target.closest('#ks-'+rebind))setRebind(null);});
+(()=>{
+  const add=(sel,list)=>{for(const[v,t]of list){const o=document.createElement('option');o.value=v;o.textContent=t;sel.append(o);}};
+  const songs=SONG_ORDER.map(k=>[k,SONGS[k].n+(SONGS[k].battle?'':'（ゆったり）')]);
+  add($('bgm-battle'),[['auto','おまかせ（試合ごとに変わる）'],...songs,['off','なし']]);
+  add($('bgm-menu'),[['auto','おまかせ（雪の宿・きよしこの夜）'],...songs,['off','なし']]);
+  add($('theme'),[['now','いまの時間に合わせる'],['rand','試合ごとにランダム'],['day','昼'],['eve','夕方'],['night','夜']]);
+  $('bgm-battle').value=bgmBattle;$('bgm-menu').value=bgmMenu;$('theme').value=themeSel;
+  $('bgm-battle').onchange=e=>{bgmBattle=e.target.value;try{localStorage.setItem('yk-bgm',bgmBattle);}catch(_){}audioUnlock();if(bgmBattle==='auto')matchSong=pickBattle();musUpdate();};
+  $('bgm-menu').onchange=e=>{bgmMenu=e.target.value;try{localStorage.setItem('yk-bgm-menu',bgmMenu);}catch(_){}audioUnlock();musUpdate();};
+  $('theme').onchange=e=>{themeSel=e.target.value;try{localStorage.setItem('yk-theme',themeSel);}catch(_){}curTheme='';applyTheme(resolveTheme(true));};
+})();
 window.addEventListener('keydown',e=>{
   if(rebind){
+    if(e.code==='Tab')return;
     e.preventDefault();
-    if(e.code==='Escape'){rebind=null;renderKeys();return;}
-    if(MOVE.includes(e.code)){$('keymsg').textContent='移動に使うキーは選べない。ほかのキーを押してね。';return;}
-    const other=rebind==='a'?'b':'a';
-    KEYS[rebind]=[e.code];KEYS[other]=KEYS[other].filter(k=>k!==e.code);
-    if(!KEYS[other].length)KEYS[other]=DEFK[other].filter(k=>k!==e.code);
-    $('keymsg').textContent='「'+(rebind==='a'?'手':'道具')+'」を '+keyName(e.code)+' にした。';
-    rebind=null;saveKeys();renderKeys();return;
+    if(e.code==='Escape'){setRebind(null);return;}
+    if(MOVE.includes(e.code)){$('keymsg').textContent='移動に使うキー（矢印・WASD）は選べないよ。ほかのキーを押してね。';return;}
+    const act=rebind,other=act==='a'?'b':'a';
+    KEYS[act]=[e.code];KEYS[other]=KEYS[other].filter(k=>k!==e.code);if(!KEYS[other].length)KEYS[other]=DEFK[other].filter(k=>k!==e.code);
+    flashKey=act+e.code;saveKeys();
+    setRebind(null);$('keymsg').textContent='「'+(act==='a'?'手':'道具')+'」を '+keyName(e.code)+' にしたよ。';
+    return;
   }
-  const tg=e.target&&e.target.tagName;if(tg==='INPUT'||tg==='TEXTAREA')return;
+  if(setOpen){if(e.code==='Escape'){e.preventDefault();closeSettings();}return;}
+  const tg=e.target&&e.target.tagName;if(tg==='INPUT'||tg==='TEXTAREA'||tg==='SELECT')return;
   if(scene!=='game'&&scene!=='ending')return;
   const isA=KEYS.a.includes(e.code),isB=KEYS.b.includes(e.code);
   if(isA||isB||MOVE.includes(e.code))e.preventDefault();
@@ -1505,7 +1680,7 @@ window.addEventListener('keydown',e=>{
   if(isA)pressA();
   if(isB)aimStart(e.code);
 });
-window.addEventListener('keyup',e=>{keys[e.code]=false;readKeys();aimEnd(e.code,scene==='game');});
+window.addEventListener('keyup',e=>{keys[e.code]=false;readKeys();aimEnd(e.code,scene==='game'&&!setOpen);});
 window.addEventListener('pagehide',()=>{try{if(peer)peer.destroy();}catch(_){}});
 window.addEventListener('blur',()=>{for(const k in keys)keys[k]=false;readKeys();aimEnd(null,false);});
 // mouse: left = hand, right = item (hold to aim)
@@ -1540,7 +1715,8 @@ for(const k in ITEMS){
   ic.width=ic.height=10;const ix=ic.getContext('2d');icon((x,y,w,h,col)=>{ix.fillStyle=col;ix.fillRect(x,y,w,h);},k,1,1,1);
   dt.append(ic,ITEMS[k].n);dd.textContent=ITEMS[k].d;il.append(dt,dd);
 }
-renderKeys();renderModes();drawBg();drawBg2();startDemo();
+renderKeys();renderModes();applyTheme(resolveTheme(false));startDemo();
+if(window.matchMedia&&window.matchMedia('(max-width:760px)').matches)document.querySelectorAll('.gsec').forEach((d,i)=>{if(i>0)d.open=false;});
 for(let i=0;i<900;i++)step(G,STEP);G.ev.length=0;G.spot=null;   // open on a match already in progress
 resize();window.addEventListener('resize',resize);
 if(window.ResizeObserver)new ResizeObserver(resize).observe(cv);
@@ -1549,7 +1725,7 @@ let ticker=null;
 try{ticker=new Worker(URL.createObjectURL(new Blob(['setInterval(()=>postMessage(0),33)'],{type:'text/javascript'})));ticker.onmessage=simTick;ticker.onerror=()=>{setInterval(simTick,33);};}
 catch(_){setInterval(simTick,33);}
 requestAnimationFrame(frame);
-window.__yk={newGame,step,radius,setMode,LEDGES,SONGS,parseSeq,MUS,get G(){return G},get V(){return V},get scene(){return scene},get role(){return role},get me(){return me}};
+window.__yk={newGame,step,radius,setMode,LEDGES,SONGS,parseSeq,MUS,applyTheme,get says(){return says},get G(){return G},get V(){return V},get scene(){return scene},get role(){return role},get me(){return me}};
 })();
 </script>
 </body>
