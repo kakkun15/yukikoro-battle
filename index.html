@@ -23,7 +23,7 @@ body{color:var(--snow);font-family:var(--f);font-size:16px;line-height:1.7}
 .chip{font-size:14px;color:var(--ink);background:var(--lamp);padding:2px 10px;letter-spacing:.12em}
 .stage{position:relative;aspect-ratio:16/9;max-width:100%;background:#dfe9f4;box-shadow:0 0 0 4px var(--ink),0 0 0 6px var(--line),0 18px 60px rgba(120,170,240,.18)}
 .stage canvas{display:block;width:100%;height:100%;image-rendering:pixelated;touch-action:none}
-.panel{position:absolute;inset:0;display:grid;place-items:center;padding:12px;pointer-events:none}
+.panel{position:absolute;inset:0;display:grid;place-items:center;padding:12px;pointer-events:none;overflow:auto}
 .card{pointer-events:auto;background:rgba(243,247,251,.95);color:var(--ink);width:min(340px,100%);padding:16px 18px 18px;display:flex;flex-direction:column;gap:12px;box-shadow:0 0 0 3px var(--ink),6px 6px 0 3px rgba(16,26,46,.35)}
 .logo{font-size:30px;line-height:1.15;letter-spacing:.06em;text-align:center;text-shadow:2px 2px 0 var(--ice)}
 .logo small{display:block;font-size:13px;letter-spacing:.05em;color:#4a5f85;text-shadow:none;margin-top:4px}
@@ -48,6 +48,10 @@ button[disabled]{opacity:.5;cursor:default}
 .guide b{font-weight:400;color:var(--snow);border-bottom:2px solid var(--lamp)}
 .bar button{color:var(--snow);background:transparent;border-color:var(--line);box-shadow:none;padding:2px 10px;font-size:14px}
 .bar button:hover{background:var(--night-2)}
+.bar label{font-size:14px;color:var(--ice);display:flex;gap:6px;align-items:center}
+.bar select{font:inherit;font-size:14px;color:var(--snow);background:var(--night);border:2px solid var(--line);padding:1px 6px;border-radius:0;max-width:62vw}
+.card select{font:inherit;font-size:14px;color:var(--ink);background:#fff;border:2px solid var(--ink);padding:2px 6px;border-radius:0}
+.card select:disabled{opacity:.6}
 .stack{display:flex;flex-direction:column;gap:8px}
 .msg{font-size:14px;color:#a3302c;min-height:1.6em}
 .roomcode{font-size:34px;letter-spacing:.3em;text-align:center;line-height:1.1}
@@ -93,6 +97,7 @@ kbd{font:inherit;font-size:13px;color:var(--ink);background:var(--snow);padding:
     <h1>ゆきころバトル</h1>
     <p class="sub">雪玉を転がして育て、だれよりも先に雪だるまを完成させる。</p>
     <span class="chip" id="roomchip" hidden></span>
+    <label for="bgm">BGM <select id="bgm"></select></label>
     <button id="mute" type="button">音: ON</button>
   </div>
 
@@ -105,6 +110,7 @@ kbd{font:inherit;font-size:13px;color:var(--ink);background:var(--snow);padding:
         <div class="row"><label for="name">なまえ</label><div class="grow"><input type="text" id="name" maxlength="8" autocomplete="off" placeholder="プレイヤー"></div></div>
         <div class="row modes" role="group" aria-label="モード"><span class="lbl">モード</span><button class="sm" id="m-t0" type="button">雪原</button><button class="sm" id="m-t1" type="button">坂道</button></div>
         <p class="modedesc" id="md-t"></p>
+        <div class="row"><label for="ski-t">スキー客</label><select id="ski-t"></select></div>
         <div class="stack">
           <button class="main" id="b-solo" type="button">ひとりで遊ぶ（ボット3体）</button>
           <button id="b-host" type="button">部屋を作る</button>
@@ -125,6 +131,7 @@ kbd{font:inherit;font-size:13px;color:var(--ink);background:var(--snow);padding:
         <ul class="members" id="members"></ul>
         <div class="row modes" role="group" aria-label="モード"><span class="lbl">モード</span><button class="sm" id="m-l0" type="button">雪原</button><button class="sm" id="m-l1" type="button">坂道</button></div>
         <p class="modedesc" id="md-l"></p>
+        <div class="row"><label for="ski-l">スキー客</label><select id="ski-l"></select></div>
         <div class="row" id="botrow"><span style="font-size:14px">ボット</span><button class="sm" id="b-botm" type="button" aria-label="ボットを減らす">−</button><span id="botn">0</span><button class="sm" id="b-botp" type="button" aria-label="ボットを増やす">＋</button></div>
         <div class="row">
           <button class="main grow" id="b-start" type="button">はじめる</button>
@@ -156,7 +163,7 @@ kbd{font:inherit;font-size:13px;color:var(--ink);background:var(--snow);padding:
     <div>
       <h2>あそびかた</h2>
       <p><b>雪原モード</b>　雪玉は新しい雪の上を転がすほど大きくなる。通ったあとは雪が減るので、白いところを探して動く。先に100%まで育てた人の勝ち。3分30秒で時間切れ。</p>
-      <p><b>坂道モード</b>　画面の上が坂の上。雪は下ほど深いので下で育てて、頂上の旗まで押し上げる。届けた大きさが自分の雪だるまに足されて、合計100%で勝ち。4分で時間切れ。手を離した雪玉は坂を転がり落ちて、当たった人を気絶させる。丸太の柵の上では止まる。</p>
+      <p><b>坂道モード</b>　画面の上が坂の上。雪は下ほど深いので下で育てて、頂上の旗まで押し上げる。届けた大きさが自分の雪だるまに足されて、合計100%で勝ち。届けた分はもう減らない。4分で時間切れ。手を離した雪玉は坂を転がり落ちて、当たった人を気絶させる。丸太の柵の上では止まる。</p>
       <p>気絶すると頭の上にバーが出る。長いほど長く動けない。</p>
       <dl>
         <dt><kbd>矢印</kbd> / <kbd>WASD</kbd></dt><dd>移動。雪玉を持っている間は遅く、玉が大きいほど重い。</dd>
@@ -172,8 +179,9 @@ kbd{font:inherit;font-size:13px;color:var(--ink);background:var(--snow);padding:
     </div>
     <div>
       <h2>アイテム</h2>
-      <p>転がしていると雪の中から出てくる。出る確率は全員同じで、順位が低いほど強いものが出る。掘り当てたら次まで20秒。</p>
+      <p>転がしていると雪の中から出てくる。出る確率は全員同じで、順位が低いほど強いものが出る。掘り当てたら次まで20秒。雪玉をけずるものを受けると、雪玉の上に減った分が出る。</p>
       <dl id="itemlist"></dl>
+      <p style="margin-top:10px">スキー客（ステージのじゃま）は「！」の列を上からすべってくる。ぶつかった人は気絶、雪玉は3%小さくなる。出てくる頻度はタイトルとロビーで変えられる。</p>
     </div>
     <div>
       <h2>友だちと遊ぶ</h2>
@@ -194,6 +202,7 @@ const SPD_HOLD=46,SPD_FREE=72,TURN=7.5,GROW=0.031,REGEN=24,DIG_P=1/90,DIG_CD=20;
 const HOOK_R=120,HOOK_A=0.8,BLAST=28,SPOT_R=12,SNAP_MS=50,PFX='yukikoro-v2-';
 const GOAL_Y=FY0+12,ROLL_ACC=95,ROLL_MAX=125,SPOT_CD=25,STUN_PX=4,GROW_S=1.0;
 const LEDGES=[{x0:40,x1:100,y:150},{x0:162,x1:222,y:120},{x0:284,x1:344,y:150}];
+const SKI=[{n:'なし'},{n:'少ない',a:26,b:36,k2:0.15},{n:'ふつう',a:13,b:21,k2:0.35},{n:'多い',a:6,b:10,k2:0.55}];
 const MODES=[{n:'雪原',d:'その場で育てて、先に100%にした人の勝ち。'},{n:'坂道',d:'下で育てて頂上の旗まで運ぶ。届けた分だけ雪だるまが育つ。'}];
 const COL=[{m:'#e2504c',d:'#a5302f'},{m:'#3f7fd6',d:'#27529a'},{m:'#eaa92a',d:'#a8700f'},{m:'#3fae6b',d:'#23743f'},{m:'#9a62d8',d:'#6a3aa4'},{m:'#ef7fb0',d:'#b84a80'}];
 const BOTN=['ユキオ','コナ','ツララ','モグ','シロ','ポン'];
@@ -201,8 +210,8 @@ const ITEMS={
   ski:{n:'スキー板',d:'5秒間スピードアップ。転がす速さも上がる。'},
   hook:{n:'フック',d:'向いている先（扇形の範囲）の相手に引っかける。雪玉を持っていれば相手を引き寄せ、手ぶらなら自分が飛んでいく。'},
   toy:{n:'ヘビのおもちゃ',d:'近くの相手を8秒追いかけて、かみつくたびに気絶させる。パンチで壊せる。'},
-  bomb:{n:'ばくだん',d:'前に投げる。爆発に巻きこんだ雪玉をけずり、人は気絶。自分も巻きこまれる。'},
-  ice:{n:'つらら',d:'自分以外でいちばん大きい雪玉に落ちる。よけられない。'},
+  bomb:{n:'ばくだん',d:'前に投げる。爆発に巻きこんだ雪玉は10%小さくなり、人は気絶する。自分も巻きこまれる。'},
+  ice:{n:'つらら',d:'自分以外でいちばん大きい雪玉に落ちて、15%小さくする。持っていた人は気絶。よけられない。'},
   spot:{n:'スポットライト',d:'下位だけが掘れる。暗くなったら光の中へ。光は1人用で、入っている人の色になる。使った人には専用の光がついてくる。入れなかった人には雷が落ちる。'}
 };
 const clamp=(v,a,b)=>v<a?a:v>b?b:v, lerp=(a,b,t)=>a+(b-a)*t, rnd=(a,b)=>a+Math.random()*(b-a);
@@ -212,10 +221,11 @@ const dist=(ax,ay,bx,by)=>Math.hypot(ax-bx,ay-by);
 
 // ---------------------------------------------------------------- simulation (host only)
 function newAI(){return{t:0,gx:0,gy:0,useT:-1,raid:0,raidT:-1,raidCd:rnd(6,14),sp:-1,spId:-1,rest:0,restCd:rnd(4,9)}}
-function newGame(list,mode){
+function newGame(list,mode,ski){
+  if(ski==null)ski=2;
   const n=list.length,slope=mode===1;
   const g={t:0,mode:slope?1:0,tl:slope?MATCH_S:MATCH,ph:'play',win:-1,startT:3,endT:0,players:[],toys:[],bombs:[],skiers:[],ices:[],spot:null,spotN:0,spotCd:0,
-    snow:new Float32Array(GW*GH).fill(1),ev:[],skiT:rnd(11,16)};
+    snow:new Float32Array(GW*GH).fill(1),ev:[],ski,skiT:ski>0?rnd(SKI[ski].a*0.8,SKI[ski].b*0.75):1e9};
   list.forEach((r,i)=>{
     const x=FX0+(i+0.5)*(FX1-FX0)/n,y=slope?FY1-8-((i%2)?16:0):FY0+62+((i%2)?28:0);
     const p={id:i,name:r.name,color:r.color,bot:!!r.bot,x,y,ang:-Math.PI/2,hold:true,bx:x,by:y,size:0,score:0,walk:0,broll:0,bvx:0,bvy:0,parked:false,
@@ -260,7 +270,7 @@ function stun(g,p,dur,kx,ky,force){
   p.relT=0;p.boost=0;p.x+=kx;p.y+=ky;clampP(p);
   emit(g,{e:'stun',id:p.id});return true;
 }
-function chip(g,o,amt){o.size=Math.max(0,o.size-amt);emit(g,{e:'chip',x:o.bx,y:o.by});if(o.hold)placeBall(o);}
+function chip(g,o,amt){const lost=Math.min(o.size,amt);o.size=Math.max(0,o.size-amt);emit(g,{e:'chip',x:o.bx,y:o.by-radius(o.size),a:Math.round(lost),id:o.id});if(o.hold)placeBall(o);}
 function pickItem(g,p){
   const n=g.players.length,pos=n>1?p.rank/(n-1):0;
   const spotOk=pos>=0.5&&!g.spot&&g.spotCd<=0&&!g.players.some(o=>o.item==='spot');
@@ -561,8 +571,8 @@ function step(g,dt){
   g.bombs=g.bombs.filter(b=>b.fuse>0);
   // skiers
   g.skiT-=dt;
-  if(g.skiT<=0){
-    g.skiT=rnd(13,21);const k=Math.random()<0.35?2:1;
+  if(g.skiT<=0&&g.ski>0){
+    const sk=SKI[g.ski];g.skiT=rnd(sk.a,sk.b);const k=Math.random()<sk.k2?2:1;
     for(let i=0;i<k;i++)g.skiers.push({x:rnd(FX0+20,FX1-20),y:FY0-12,vx:rnd(-30,30),vy:rnd(135,165),warn:1.5+i*0.5,hp:0,hb:0,c:(Math.random()*4)|0});
     emit(g,{e:'skiWarn'});
   }
@@ -606,13 +616,156 @@ function step(g,dt){
 let role='demo';              // demo | host | client
 let scene='title';            // title | lobby | game | result
 let G=null,V=null,me=-1,online=false,isHostUi=true;
-let roster=[],peer=null,hostConn=null,roomCode='',botCount=3,curMode=0;
+let roster=[],peer=null,hostConn=null,roomCode='',botCount=3,curMode=0,curSki=2;
+try{const k=+localStorage.getItem('yk-ski');if(localStorage.getItem('yk-ski')!=null&&k>=0&&k<=3)curSki=k;}catch(_){}
 try{curMode=localStorage.getItem('yk-mode')==='1'?1:0;}catch(_){}
 let prevS=null,curS=null,curAt=0,evOut=[];
 const inp={mx:0,my:0,a:0,b:0,ca:0,cb:0,aim:false};
 let aimBy=null,aimTxt='';
 const isTouch=!!(window.matchMedia&&window.matchMedia('(pointer:coarse)').matches);
 let muted=false,AC=null;
+
+
+// ---------------------------------------------------------------- music (NES-style: 2 pulse, triangle, noise)
+const rep_=(s,n)=>Array(n).fill(s).join(' ');
+function chordBars(chords,steps,pat,len,oct){ // one chord per bar -> broken-chord pattern
+  return chords.map(c=>{const ns=CH[c].map(x=>x+(oct||4)),o=[];for(let i=0;i<steps/len;i++){const k=pat[i%pat.length];o.push((k<0?'R':ns[k%ns.length])+':'+len);}return o.join(' ');}).join(' ');
+}
+function bassBars(chords,pat){ // pat entries: 'r' root, 'f' fifth below, 'o' root octave up, '-' rest; each '' token = len
+  return chords.map(c=>pat.map(t=>{const[k,l]=t.split(':');const b=BASS[c];return(k==='r'?b[0]:k==='f'?b[1]:k==='o'?b[2]:'R')+':'+l;}).join(' ')).join(' ');
+}
+const CH={C:['C','E','G'],Dm:['D','F','A'],D:['D','F#','A'],Em:['E','G','B'],E:['E','G#','B'],F:['F','A','C'],G:['G','B','D'],Gm:['G','Bb','D'],A:['A','C#','E'],Am:['A','C','E'],Bb:['Bb','D','F'],B:['B','D#','F#'],Eb:['Eb','G','Bb'],Edim:['E','G','Bb'],Cm:['C','Eb','G']};
+const BASS={C:['C3','G2','C4'],Dm:['D3','A2','D4'],D:['D3','A2','D4'],Em:['E3','B2','E4'],E:['E3','B2','E4'],F:['F2','C3','F3'],G:['G2','D3','G3'],Gm:['G2','D3','G3'],A:['A2','E3','A3'],Am:['A2','E3','A3'],Bb:['Bb2','F3','Bb3'],B:['B2','F#3','B3'],Eb:['Eb3','Bb2','Eb4'],Edim:['E3','Bb2','E4'],Cm:['C3','G2','C4']};
+const SONGS={};
+(function(){
+  // Jingle Bells (J. Pierpont, 1857)
+  const jv='G4:4 E5 D5 C5 G4:12 G4:2 G4:2 G4:4 E5 D5 C5 A4:16 A4:4 F5 E5 D5 B4:16 G5:4 G5 F5 D5 E5:16 G4:4 E5 D5 C5 G4:16 G4:4 E5 D5 C5 A4:12 A4:4 A4:4 F5 E5 D5 G5:4 G5 G5 G5 A5:4 G5 F5 D5 C5:16';
+  const jc='E5:4 E5 E5:8 E5:4 E5 E5:8 E5:4 G5 C5:6 D5:2 E5:16 F5:4 F5 F5:6 F5:2 F5:4 E5 E5 E5:2 E5:2 E5:4 D5 D5 E5 D5:8 G5:8 E5:4 E5 E5:8 E5:4 E5 E5:8 E5:4 G5 C5:6 D5:2 E5:16 F5:4 F5 F5:6 F5:2 F5:4 E5 E5 E5:2 E5:2 G5:4 G5 F5 D5 C5:16';
+  const jch='C C C F F G G C C C C F F G G C C C C C F C D G C C C C F C G C'.split(' ');
+  SONGS.jingle={n:'ジングルベル',bpm:176,battle:1,d1:0.5,d2:0.25,v:[0.10,0.05,0.16,0.08],
+    p1:jv+' '+jc,p2:chordBars(jch,16,[-1,1,-1,2],2,4),tri:bassBars(jch,['r:4','f:4','r:4','f:4']),noi:rep_('K:2 H:2 S:2 H:2 K:2 H:2 S:2 H:2',32)};
+  // We Wish You a Merry Christmas (traditional)
+  const wv='G5:4 G5:2 A5:2 G5:2 F#5:2 E5:4 C5:4 E5:4 A5:4 A5:2 B5:2 A5:2 G5:2 F#5:4 D5:4 D5:4 B5:4 B5:2 C6:2 B5:2 A5:2 G5:4 E5:4 D5:2 D5:2 E5:4 A5:4 F#5:4 G5:8 D5:4';
+  const wc='G5:4 G5:4 G5:4 F#5:8 F#5:4 G5:4 F#5:4 E5:4 D5:8 A5:4 B5:4 A5:2 A5:2 G5:2 G5:2 D6:4 D5:4 D5:2 D5:2 E5:4 A5:4 F#5:4 G5:8 D5:4';
+  const wch='G C A D B Em D G G D Em D G D C G'.split(' ');
+  SONGS.wish={n:'おめでとうクリスマス',bpm:200,battle:1,d1:0.25,d2:0.125,v:[0.10,0.05,0.16,0.07],
+    p1:wv+' '+wc,p2:chordBars(wch,12,[-1,1,2],4,4),tri:bassBars(wch,['r:4','f:4','f:4']),noi:rep_('K:4 H:4 S:4',16)};
+  // Original: Fubuki (blizzard on the slope)
+  const fm='A4:4 D5:4 F5:4 E5:2 D5:2 D5:4 C5:2 Bb4:2 F5:8 E5:4 G5:4 E5:2 C5:2 E5:4 C#5:6 A4:2 E5:8 A4:4 D5:4 F5:4 A5:4 G5:4 F5:2 E5:2 D5:8 Bb5:4 A5:2 G5:2 F5:4 E5:4 E5:6 C#5:2 A4:8 '+
+    'F5:2 F5:2 R:2 F5:2 G5:4 A5:4 G5:4 E5:4 C5:8 D5:2 D5:2 R:2 D5:2 E5:4 F5:4 F5:4 D5:4 Bb4:8 G5:4 F5:2 G5:2 Bb5:4 A5:4 G5:4 F5:2 E5:2 C5:8 E5:4 C#5:4 E5:4 G5:4 A5:8 G5:4 E5:4';
+  const fch='Dm Bb C A Dm Bb Gm A F C Dm Bb Gm C A A'.split(' ');
+  SONGS.fubuki={n:'ふぶきの坂道',bpm:152,battle:1,d1:0.25,d2:0.125,v:[0.10,0.045,0.16,0.08],
+    p1:fm,p2:chordBars(fch,16,[0,1,2,1],1,4),tri:bassBars(fch,['r:2','o:2','r:2','o:2','r:2','o:2','r:2','o:2']),noi:rep_('K:2 H:2 S:2 H:2 K:2 K:2 S:2 H:2',16)};
+  // Original: Yuki no yado (calm, for menus)
+  const ym='C5:4 F5:4 A5:6 G5:2 F5:4 D5:4 A4:8 Bb4:4 D5:4 F5:6 E5:2 D5:4 C5:4 G4:8 C5:4 F5:4 A5:6 C6:2 Bb5:4 A5:4 F5:8 D5:4 F5:4 E5:4 G5:4 F5:16 '+
+    'A5:4 G5:4 F5:4 E5:4 D5:8 F5:8 G5:4 F5:4 E5:4 D5:4 C5:8 E5:8 F5:4 A5:4 G5:4 F5:4 E5:4 D5:4 C5:8 D5:4 E5:4 G5:4 E5:4 F5:16';
+  const ych='F Dm Bb C F Bb C F F Dm C C F C C F'.split(' ');
+  SONGS.yado={n:'雪の宿',bpm:92,battle:0,d1:0.25,d2:0.125,v:[0.08,0.04,0.12,0.03],
+    p1:ym,p2:chordBars(ych,16,[0,1,2,1],2,4),tri:bassBars(ych,['r:8','f:8']),noi:rep_('R:2 h:2',64)};
+  // Silent Night (F. X. Gruber, 1818)
+  const sm='G5:6 A5:2 G5:4 E5:12 G5:6 A5:2 G5:4 E5:12 D6:8 D6:4 B5:12 C6:8 C6:4 G5:12 A5:8 A5:4 C6:6 B5:2 A5:4 G5:6 A5:2 G5:4 E5:12 A5:8 A5:4 C6:6 B5:2 A5:4 G5:6 A5:2 G5:4 E5:12 D6:8 D6:4 F6:6 D6:2 B5:4 C6:12 E6:12 C6:6 G5:2 E5:4 G5:6 F5:2 D5:4 C5:12 R:12';
+  const sch='C C C C G G C C F F C C F F C C G G C C C G C C'.split(' ');
+  SONGS.silent={n:'きよしこの夜',bpm:84,battle:0,d1:0.25,d2:0.125,v:[0.08,0.04,0.12,0],
+    p1:sm,p2:chordBars(sch,12,[0,1,2,1,2,1],2,4),tri:bassBars(sch,['r:6','f:6']),noi:'R:'+(24*12)};
+  // Dies irae (G. Verdi, Requiem, 1874) - arranged
+  SONGS.dies=DIES();
+})();
+function DIES(){
+  // hammer blows: tutti chord on 1 and 3, bass drum on the off-beats
+  const ham='G5:2 R:6 G5:2 R:6',hamB='D5:2 R:6 D5:2 R:6';
+  const run=n=>n.split(' ').map(x=>x+':1').join(' ');
+  const rG=run('G6 F#6 Eb6 D6 C6 Bb5 A5 G5 F#5 Eb5 D5 C5 Bb4 A4 G4 F#4'),rEb=run('G6 F6 Eb6 D6 C6 Bb5 G5 F5 Eb5 D5 C5 Bb4 G4 F4 Eb4 D4');
+  const rE=run('Bb5 G5 E5 C#5 Bb5 G5 E5 C#5 Bb5 G5 E5 C#5 Bb4 G4 E4 C#4'),rD=run('A5 F#5 D5 C5 A5 F#5 D5 C5 A5 F#5 D5 C5 A4 F#4 D4 C4');
+  const p1=rep_(ham,4)+' '+
+    'D5:8 D5:8 Eb5:8 D5:8 E5:4 G5:4 Bb5:4 G5:4 F#5:8 A5:8 '+
+    'D5:8 D5:8 Eb5:8 G5:8 G5:4 E5:4 C#5:4 Bb4:4 A4:16 '+
+    rep_(ham,2)+' G5:4 Bb5:4 A5:4 G5:4 F#5:16';
+  const p2=rep_(hamB,4)+' '+[rG,rEb,rE,rD,rG,rEb,rE,rD].join(' ')+' '+rep_(hamB,2)+' '+rG+' '+rD;
+  const tri=rep_('G2:2 R:6 G2:2 R:6',4)+' '+
+    rep_('G2:2 G3:2',4)+' '+rep_('Eb2:2 Eb3:2',4)+' '+rep_('E2:2 E3:2',4)+' '+rep_('D2:2 D3:2',4)+' '+
+    rep_('G2:2 G3:2',4)+' '+rep_('Eb2:2 Eb3:2',4)+' '+rep_('E2:2 E3:2',4)+' '+rep_('D2:2 D3:2',4)+' '+
+    rep_('G2:2 R:6 G2:2 R:6',2)+' '+rep_('G2:2 G3:2',4)+' '+rep_('D2:2 D3:2',4);
+  const noi=rep_('C:2 R:3 B:1 R:2 C:2 R:3 B:1 R:2',4)+' '+rep_('B:2 H:2 S:2 H:2 B:2 H:2 S:2 S:2',8)+' '+rep_('C:2 R:3 B:1 R:2 C:2 R:3 B:1 R:2',2)+' '+rep_('B:2 H:2 S:2 H:2 B:2 H:2 S:2 S:2',2);
+  return{n:'怒りの日（ヴェルディ）',bpm:160,battle:1,d1:0.5,d2:0.25,v:[0.10,0.05,0.17,0.10],p1,p2,tri,noi};
+}
+const SONG_ORDER=['dies','jingle','wish','fubuki','yado','silent'];
+function parseSeq(str){const out=[];let len=4;for(const t of String(str).trim().split(/\s+/)){if(!t)continue;const i=t.indexOf(':');const n=i<0?t:t.slice(0,i);if(i>=0)len=+t.slice(i+1);out.push([n,len]);}return out;}
+const NOTE_I={C:0,D:2,E:4,F:5,G:7,A:9,B:11};
+function nfreq(n){const m=/^([A-G])([#b]?)(-?\d)$/.exec(n);if(!m)return 0;const k=NOTE_I[m[1]]+(m[2]==='#'?1:m[2]==='b'?-1:0)+(+m[3]+1)*12;return 440*Math.pow(2,(k-69)/12);}
+const MUS={id:null,song:null,ch:[],nodes:new Set(),gain:null,pw:{},noise:null,hold:0};
+let bgmSel='auto',matchSong='jingle';
+try{const b=localStorage.getItem('yk-bgm');if(b&&(b==='auto'||b==='off'||SONGS[b]))bgmSel=b;}catch(_){}
+function pickBattle(){const ids=SONG_ORDER.filter(k=>SONGS[k].battle);return ids[(Math.random()*ids.length)|0];}
+function audioUnlock(){
+  try{AC=AC||new(window.AudioContext||window.webkitAudioContext)();if(AC.state==='suspended')AC.resume();}catch(_){return false;}
+  if(!MUS.gain){MUS.gain=AC.createGain();MUS.gain.gain.value=muted?0:0.9;MUS.gain.connect(AC.destination);
+    const len=AC.sampleRate,buf=AC.createBuffer(1,len,AC.sampleRate),d=buf.getChannelData(0);let r=1;for(let i=0;i<len;i++){r^=r<<13;r^=r>>17;r^=r<<5;d[i]=((r>>>0)/4294967296)*2-1;}MUS.noise=buf;}
+  return true;
+}
+function pulseWave(duty){
+  if(MUS.pw[duty])return MUS.pw[duty];
+  const N=48,re=new Float32Array(N),im=new Float32Array(N);
+  for(let n=1;n<N;n++)re[n]=2*Math.sin(n*Math.PI*duty)/(n*Math.PI);
+  return MUS.pw[duty]=AC.createPeriodicWave(re,im);
+}
+function musStop(){for(const n of MUS.nodes){try{n.stop();}catch(_){}}MUS.nodes.clear();MUS.id=null;MUS.song=null;}
+function musPlay(id){
+  musStop();if(!id||!SONGS[id]||!AC||!MUS.gain)return;
+  const s=SONGS[id],t=AC.currentTime+0.08;
+  MUS.id=id;MUS.song=s;MUS.ch=['p1','p2','tri','noi'].map(k=>({k,ev:parseSeq(s[k]||''),i:0,t}));
+}
+function track(node,t1){MUS.nodes.add(node);node.onended=()=>MUS.nodes.delete(node);node.stop(t1);}
+function playTone(k,n,t,dur,s){
+  const f=nfreq(n);if(!f)return;
+  const o=AC.createOscillator(),g=AC.createGain(),v=s.v[k==='p1'?0:k==='p2'?1:2];if(!v)return;
+  if(k==='tri')o.type='triangle';else o.setPeriodicWave(pulseWave(k==='p1'?s.d1:s.d2));
+  o.frequency.setValueAtTime(f,t);
+  const gl=Math.max(0.03,dur*(k==='tri'?0.95:0.86));
+  g.gain.setValueAtTime(0,t);g.gain.linearRampToValueAtTime(v,t+0.006);
+  if(k!=='tri')g.gain.setTargetAtTime(v*0.55,t+0.02,0.12);
+  g.gain.setTargetAtTime(0,t+gl,0.015);
+  o.connect(g);g.connect(MUS.gain);o.start(t);track(o,t+gl+0.1);
+}
+function playDrum(n,t,s){
+  const v=s.v[3];if(!v||!MUS.noise)return;
+  const mk=(dur,type,freq,vol)=>{const b=AC.createBufferSource(),f=AC.createBiquadFilter(),g=AC.createGain();b.buffer=MUS.noise;f.type=type;f.frequency.value=freq;
+    g.gain.setValueAtTime(vol,t);g.gain.exponentialRampToValueAtTime(0.001,t+dur);b.connect(f);f.connect(g);g.connect(MUS.gain);b.start(t,Math.random()*0.5);track(b,t+dur+0.02);};
+  const thump=(f0,f1,dur,vol)=>{const o=AC.createOscillator(),g=AC.createGain();o.type='triangle';o.frequency.setValueAtTime(f0,t);o.frequency.exponentialRampToValueAtTime(f1,t+dur);
+    g.gain.setValueAtTime(vol,t);g.gain.exponentialRampToValueAtTime(0.001,t+dur);o.connect(g);g.connect(MUS.gain);o.start(t);track(o,t+dur+0.02);};
+  if(n==='K')thump(160,45,0.12,v*2.2);
+  else if(n==='S')mk(0.12,'bandpass',1800,v*1.4);
+  else if(n==='H')mk(0.04,'highpass',7000,v*0.7);
+  else if(n==='h')mk(0.03,'highpass',8000,v*0.5);
+  else if(n==='B'){thump(110,32,0.4,v*3);mk(0.3,'lowpass',500,v*2);}
+  else if(n==='C'){mk(0.6,'highpass',3500,v*1.2);thump(120,40,0.25,v*2.4);}
+}
+function musTick(){
+  if(!MUS.id||!AC)return;
+  const s=MUS.song,st=60/s.bpm/4,now=AC.currentTime,ahead=now+0.3;
+  if(MUS.ch.some(c=>c.ev.length&&c.t<now-0.15)){musPlay(MUS.id);return;}
+  for(const c of MUS.ch){
+    if(!c.ev.length)continue;
+    let guard=0;
+    while(c.t<ahead&&guard++<64){
+      const e=c.ev[c.i],dur=e[1]*st;
+      if(e[0]!=='R'){if(c.k==='noi')playDrum(e[0],c.t,s);else playTone(c.k,e[0],c.t,dur,s);}
+      c.t+=dur;c.i=(c.i+1)%c.ev.length;
+    }
+  }
+}
+function wantSong(){
+  if(bgmSel==='off'||performance.now()<MUS.hold)return null;
+  const sel=SONGS[bgmSel];
+  if(scene==='game'||scene==='ending')return bgmSel==='auto'?matchSong:bgmSel;
+  if(sel&&!sel.battle)return bgmSel;
+  return scene==='result'?'silent':'yado';
+}
+function musUpdate(){
+  if(!AC||!MUS.gain)return;
+  MUS.gain.gain.setTargetAtTime(muted?0:0.9,AC.currentTime,0.05);
+  const w=wantSong();if(w!==MUS.id)musPlay(w);
+  musTick();
+}
 
 // ---------------------------------------------------------------- effects
 let parts=[],lines=[],pops=[],banners=[],bolts=[],floats=[],shake=0,flash=0,flakes=[];
@@ -621,7 +774,7 @@ function burst(x,y,n,col,spd=30,life=0.5){for(let i=0;i<n;i++){const a=Math.rand
 function banner(t,d){banners=[{t,d,m:d}];}
 function sfx(n){
   if(muted||role==='demo')return;
-  try{AC=AC||new(window.AudioContext||window.webkitAudioContext)();if(AC.state==='suspended')AC.resume();}catch(_){return;}
+  if(!audioUnlock())return;
   const T=AC.currentTime;
   const tone=(f,d,ty,v,f2,dl=0)=>{const o=AC.createOscillator(),g=AC.createGain();o.type=ty;o.frequency.setValueAtTime(f,T+dl);if(f2)o.frequency.exponentialRampToValueAtTime(f2,T+dl+d);g.gain.setValueAtTime(v,T+dl);g.gain.exponentialRampToValueAtTime(0.001,T+dl+d);o.connect(g);g.connect(AC.destination);o.start(T+dl);o.stop(T+dl+d+0.02);};
   if(n==='dig'){tone(660,.09,'square',.05);tone(990,.14,'square',.05,0,.09);}
@@ -652,7 +805,7 @@ function fx(e){
       break;}
     case'punch':burst(e.x,e.y,3,'#ffffff',20,0.25);if(e.id===me)sfx('punch');break;
     case'stun':{const p=P[e.id];burst(p.x,p.y-6,6,'#f4b860',26,0.5);if(e.id===me)sfx('stun');break;}
-    case'chip':burst(e.x,e.y-4,12,'#dbe6f3',36,0.6);break;
+    case'chip':burst(e.x,e.y-4,12,'#dbe6f3',36,0.6);if(e.a>=1)floats.push({txt:'-'+e.a+'%',x:e.x,y:e.y-6,t:0,col:'#c0392b'});break;
     case'boom':shake=0.35;flash=0.12;burst(e.x,e.y,26,'#f08a3c',70,0.6);burst(e.x,e.y,14,'#fff3c4',40,0.4);lines.push({ring:1,x:e.x,y:e.y,t:0.3,m:0.3});sfx('boom');break;
     case'hook':lines.push({x1:e.x1,y1:e.y1,x2:e.x2,y2:e.y2,t:0.3,m:0.3});sfx('hook');break;
     case'ice':shake=0.2;burst(e.x,e.y-6,16,'#8fd0f0',50,0.6);sfx('ice');break;
@@ -664,7 +817,7 @@ function fx(e){
     case'thud':burst(e.x,e.y,6,'#e3ebf5',26,0.35);break;
     case'skiWarn':if(!demo){banner('スキー客がつっこんでくる！',1.5);sfx('warn');}break;
     case'toyDie':burst(e.x,e.y,8,'#3fae6b',26,0.4);break;
-    case'win':{const p=P[e.id];for(let i=0;i<40;i++)parts.push({x:p.bx+rnd(-30,30),y:p.by-40+rnd(-20,10),vx:rnd(-20,20),vy:rnd(-40,-5),l:rnd(1,2.2),col:COL[(Math.random()*6)|0].m,g:50});sfx('win');break;}
+    case'win':{const p=P[e.id];for(let i=0;i<40;i++)parts.push({x:p.bx+rnd(-30,30),y:p.by-40+rnd(-20,10),vx:rnd(-20,20),vy:rnd(-40,-5),l:rnd(1,2.2),col:COL[(Math.random()*6)|0].m,g:50});if(role!=='demo'){MUS.hold=performance.now()+2600;musStop();}sfx('win');break;}
   }
 }
 function updFx(dt){
@@ -1078,6 +1231,7 @@ function heartbeat(now){
 function simTick(){
   const now=performance.now();let dt=(now-lastTick)/1000;lastTick=now;if(dt>0.5)dt=0.5;
   hbAcc+=dt;if(hbAcc>=1){hbAcc=0;heartbeat(now);}
+  musUpdate();
   if(role==='client'){
     inAcc+=dt;
     if(hostConn&&hostConn.open&&scene==='game'&&inAcc>=0.05){inAcc=0;hostConn.send({t:'in',mx:r2(inp.mx),my:r2(inp.my),a:inp.ca,b:inp.cb});}
@@ -1114,7 +1268,7 @@ function frame(now){
 }
 function startDemo(){
   role='demo';me=-1;
-  G=newGame([0,1,2,3].map(i=>({name:BOTN[i],color:i,bot:true})),curMode);G.startT=0.01;V=G;parts=[];pops=[];lines=[];banners=[];bolts=[];floats=[];
+  G=newGame([0,1,2,3].map(i=>({name:BOTN[i],color:i,bot:true})),curMode,curSki);G.startT=0.01;V=G;parts=[];pops=[];lines=[];banners=[];bolts=[];floats=[];
 }
 
 // ---------------------------------------------------------------- UI and rooms
@@ -1133,6 +1287,7 @@ function rebuildRoster(){
 function listOf(){return roster.map(r=>({name:r.name,color:r.color,bot:r.bot}));}
 function renderModes(){
   for(const k of['t','l'])for(const m of[0,1]){const b=$('m-'+k+m);b.setAttribute('aria-pressed',String(curMode===m));if(k==='l')b.disabled=!isHostUi;}
+  for(const k of['t','l']){const sel=$('ski-'+k);sel.value=String(curSki);if(k==='l')sel.disabled=!isHostUi;}
   $('md-t').textContent=$('md-l').textContent=MODES[curMode].d;
 }
 function setMode(m){
@@ -1157,14 +1312,14 @@ function renderLobby(list,you,host){
 }
 function broadcastLobby(){
   rebuildRoster();const list=listOf();
-  roster.forEach((r,i)=>{if(r.conn&&r.conn.open)r.conn.send({t:'lobby',list,you:i,code:roomCode,mode:curMode});});
+  roster.forEach((r,i)=>{if(r.conn&&r.conn.open)r.conn.send({t:'lobby',list,you:i,code:roomCode,mode:curMode,ski:curSki});});
   renderLobby(list,0,true);
 }
 function openLobby(){scene='lobby';isHostUi=true;show('p-lobby');chipText();broadcastLobby();}
 function beginHostGame(){
   rebuildRoster();const list=listOf();
   roster.forEach(r=>{r.la=r.lb=0;});
-  G=newGame(list,curMode);V=G;role='host';me=0;scene='game';acc=0;evOut=[];parts=[];pops=[];lines=[];banners=[];bolts=[];floats=[];
+  G=newGame(list,curMode,curSki);V=G;matchSong=pickBattle();role='host';me=0;scene='game';acc=0;evOut=[];parts=[];pops=[];lines=[];banners=[];bolts=[];floats=[];
   inp.a=inp.b=0;
   roster.forEach((r,i)=>{if(r.conn&&r.conn.open)r.conn.send({t:'start',list,you:i,mode:curMode});});
   show(null);banner(curMode===1?'育てて、頂上の旗まで運べ！':'雪玉を100%まで育てろ！',2.6);if(document.activeElement&&document.activeElement.blur)document.activeElement.blur();
@@ -1261,8 +1416,8 @@ function joinRoom(){
 function clientData(d){
   if(!d||typeof d!=='object')return;
   lastHost=performance.now();
-  if(d.t==='lobby'){const m=d.mode?1:0,ch=m!==curMode;curMode=m;scene='lobby';role='demo';if(ch||!G||G.players.length!==4||G.players.some(p=>!p.bot))startDemo();isHostUi=false;roomCode=d.code||roomCode;show('p-lobby');chipText();setMsg('');renderLobby(d.list,d.you,false);}
-  else if(d.t==='start'){role='client';G=null;curMode=d.mode?1:0;V=makeView(d.list,curMode);me=d.you;prevS=curS=null;scene='game';inp.ca=inp.cb=0;parts=[];pops=[];lines=[];banners=[];bolts=[];floats=[];show(null);banner(curMode===1?'育てて、頂上の旗まで運べ！':'雪玉を100%まで育てろ！',2.6);}
+  if(d.t==='lobby'){const m=d.mode?1:0,ch=m!==curMode;curMode=m;if(d.ski>=0&&d.ski<=3)curSki=d.ski|0;scene='lobby';role='demo';if(ch||!G||G.players.length!==4||G.players.some(p=>!p.bot))startDemo();isHostUi=false;roomCode=d.code||roomCode;show('p-lobby');chipText();setMsg('');renderLobby(d.list,d.you,false);}
+  else if(d.t==='start'){role='client';G=null;curMode=d.mode?1:0;V=makeView(d.list,curMode);me=d.you;matchSong=pickBattle();prevS=curS=null;scene='game';inp.ca=inp.cb=0;parts=[];pops=[];lines=[];banners=[];bolts=[];floats=[];show(null);banner(curMode===1?'育てて、頂上の旗まで運べ！':'雪玉を100%まで育てろ！',2.6);}
   else if(d.t==='s'&&role==='client'&&V){prevS=curS;curS=d;curAt=performance.now();if(!prevS)buildView(curAt);for(const e of d.E)fx(e);if(d.ph==='end'&&scene==='game'){scene='ending';setTimeout(()=>{if(role==='client'&&scene==='ending')showResult();},2500);}}
   else if(d.t==='no'){leave(d.why||'入れなかった。');}
 }
@@ -1271,6 +1426,10 @@ $('b-host').onclick=hostRoom;
 $('b-join').onclick=joinRoom;
 $('code').addEventListener('keydown',e=>{if(e.key==='Enter')joinRoom();});
 for(const k of['t','l'])for(const m of[0,1])$('m-'+k+m).onclick=()=>setMode(m);
+for(const k of['t','l']){
+  const sel=$('ski-'+k);SKI.forEach((o,i)=>{const op=document.createElement('option');op.value=String(i);op.textContent=o.n;sel.append(op);});
+  sel.onchange=()=>{curSki=+sel.value;try{localStorage.setItem('yk-ski',String(curSki));}catch(_){}renderModes();if(role==='demo')startDemo();if(scene==='lobby'&&isHostUi&&online)broadcastLobby();};
+}
 $('b-botp').onclick=()=>{botCount++;broadcastLobby();};
 $('b-botm').onclick=()=>{botCount--;broadcastLobby();};
 $('b-start').onclick=()=>{if(roster.length>=2)beginHostGame();};
@@ -1284,7 +1443,12 @@ $('b-copy').onclick=()=>{
   const done=()=>{$('copied').textContent='コピーした';setTimeout(()=>{$('copied').textContent='';},1500);};
   try{navigator.clipboard.writeText(roomCode).then(done,()=>{$('copied').textContent='コードを書き写してね';});}catch(_){$('copied').textContent='コードを書き写してね';}
 };
-$('mute').onclick=()=>{muted=!muted;$('mute').textContent='音: '+(muted?'OFF':'ON');};
+$('mute').onclick=()=>{muted=!muted;$('mute').textContent='音: '+(muted?'OFF':'ON');audioUnlock();};
+(()=>{const sel=$('bgm');const add=(v,t)=>{const o=document.createElement('option');o.value=v;o.textContent=t;sel.append(o);};
+  add('auto','おまかせ');for(const k of SONG_ORDER)add(k,SONGS[k].n);add('off','なし');sel.value=bgmSel;
+  sel.onchange=()=>{bgmSel=sel.value;try{localStorage.setItem('yk-bgm',bgmSel);}catch(_){}audioUnlock();if(scene==='game'&&bgmSel==='auto')matchSong=pickBattle();musUpdate();};})();
+const unlockOnce=()=>{audioUnlock();window.removeEventListener('pointerdown',unlockOnce);window.removeEventListener('keydown',unlockOnce);};
+window.addEventListener('pointerdown',unlockOnce);window.addEventListener('keydown',unlockOnce);
 
 // ---------------------------------------------------------------- input
 const keys={};
@@ -1385,7 +1549,7 @@ let ticker=null;
 try{ticker=new Worker(URL.createObjectURL(new Blob(['setInterval(()=>postMessage(0),33)'],{type:'text/javascript'})));ticker.onmessage=simTick;ticker.onerror=()=>{setInterval(simTick,33);};}
 catch(_){setInterval(simTick,33);}
 requestAnimationFrame(frame);
-window.__yk={newGame,step,radius,setMode,LEDGES,get G(){return G},get V(){return V},get scene(){return scene},get role(){return role},get me(){return me}};
+window.__yk={newGame,step,radius,setMode,LEDGES,SONGS,parseSeq,MUS,get G(){return G},get V(){return V},get scene(){return scene},get role(){return role},get me(){return me}};
 })();
 </script>
 </body>
