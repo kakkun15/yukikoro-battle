@@ -135,7 +135,6 @@ button.ghost:hover{background:var(--night-2)}
 .ks-keys{display:flex;flex-wrap:wrap;gap:8px;min-width:0}
 .ks-keys kbd{font-size:15px;background:#fff;box-shadow:0 0 0 2px var(--ink),0 3px 0 2px var(--ink);padding:1px 8px;margin-bottom:3px}
 .ks-keys kbd.new{background:var(--lamp)}
-.sheet:focus,.keyset:focus{outline:none}
 .keyset.listen{border-color:var(--berry);background:#fff3f2}
 .listen-box{font-size:14px;color:#a3302c;animation:blink 1s steps(2) infinite}
 @keyframes blink{50%{opacity:.35}}
@@ -313,7 +312,7 @@ button.ghost:hover{background:var(--night-2)}
 </div>
 
 <div class="modal" id="settings" hidden>
-  <div class="sheet" tabindex="-1" role="dialog" aria-modal="true" aria-labelledby="set-h">
+  <div class="sheet" role="dialog" aria-modal="true" aria-labelledby="set-h">
     <div class="sheet-head"><h2 id="set-h">設定</h2><button class="sm" id="set-close" type="button">閉じる</button></div>
     <section class="sset">
       <h3>音楽</h3>
@@ -326,7 +325,7 @@ button.ghost:hover{background:var(--night-2)}
     </section>
     <section class="sset">
       <h3>キー</h3>
-      <div class="keyset" id="ks-a" tabindex="-1"><div class="ks-name">手<small>離す・パンチ</small></div><div class="ks-keys" id="ksk-a"></div><button class="sm" id="rb-a" type="button">変える</button></div>
+      <div class="keyset" id="ks-a"><div class="ks-name">手<small>離す・パンチ</small></div><div class="ks-keys" id="ksk-a"></div><button class="sm" id="rb-a" type="button">変える</button></div>
       <div class="keyset" id="ks-b"><div class="ks-name">道具<small>押して狙う・離して使う</small></div><div class="ks-keys" id="ksk-b"></div><button class="sm" id="rb-b" type="button">変える</button></div>
       <div class="row"><button class="sm" id="rb-reset" type="button">初期設定にもどす</button></div>
       <p class="keymsg" id="keymsg" role="status"></p>
@@ -883,7 +882,7 @@ let bgmBattle='auto',bgmMenu='auto',matchSong='jingle';
 try{const ok=v=>v&&(v==='auto'||v==='off'||SONGS[v]);const b=localStorage.getItem('yk-bgm');if(ok(b))bgmBattle=b;const m=localStorage.getItem('yk-bgm-menu');if(ok(m))bgmMenu=m;}catch(_){}
 function pickBattle(){const ids=SONG_ORDER.filter(k=>SONGS[k].battle);return ids[(Math.random()*ids.length)|0];}
 function audioUnlock(){
-  try{AC=AC||new(window.AudioContext||window.webkitAudioContext)();if(AC.state!=='running'){const r=AC.resume();if(r&&r.catch)r.catch(()=>{});}}catch(_){return false;}
+  try{AC=AC||new(window.AudioContext||window.webkitAudioContext)();if(AC.state==='suspended')AC.resume();}catch(_){return false;}
   if(!MUS.gain){MUS.gain=AC.createGain();MUS.gain.gain.value=muted?0:0.9;MUS.gain.connect(AC.destination);
     const len=AC.sampleRate,buf=AC.createBuffer(1,len,AC.sampleRate),d=buf.getChannelData(0);let r=1;for(let i=0;i<len;i++){r^=r<<13;r^=r>>17;r^=r<<5;d[i]=((r>>>0)/4294967296)*2-1;}MUS.noise=buf;}
   return true;
@@ -1718,11 +1717,8 @@ $('b-copy').onclick=()=>{
   try{navigator.clipboard.writeText(roomCode).then(done,()=>{$('copied').textContent='コードを書き写してね';});}catch(_){$('copied').textContent='コードを書き写してね';}
 };
 $('mute').onclick=()=>{muted=!muted;$('mute').textContent='音: '+(muted?'OFF':'ON');audioUnlock();};
-// iPhone (Safari, Brave, in-app browsers) only lets sound start from a tap that ends (touchend/click), and
-// pauses it again when the app goes to the background, so keep trying on every tap until it is running.
-const wakeAudio=()=>{if(!AC||AC.state!=='running')audioUnlock();};
-for(const ev of['pointerdown','pointerup','touchend','click','keydown'])window.addEventListener(ev,wakeAudio,{capture:true,passive:true});
-document.addEventListener('visibilitychange',()=>{if(!document.hidden&&AC&&AC.state!=='running')audioUnlock();});
+const unlockOnce=()=>{audioUnlock();window.removeEventListener('pointerdown',unlockOnce);window.removeEventListener('keydown',unlockOnce);};
+window.addEventListener('pointerdown',unlockOnce);window.addEventListener('keydown',unlockOnce);
 
 // ---------------------------------------------------------------- input
 const keys={};
@@ -1769,7 +1765,7 @@ $('rb-b').onclick=()=>setRebind(rebind==='b'?null:'b');
 $('rb-reset').onclick=()=>{KEYS={a:DEFK.a.slice(),b:DEFK.b.slice()};flashKey='';saveKeys();setRebind(null);$('keymsg').textContent='初期設定（手：X・F、道具：Space・E・Enter）にもどしたよ。';};
 function openSettings(toKeys){
   $('settings').hidden=false;setOpen=true;for(const k in keys)keys[k]=false;readKeys();aimEnd(null,false);
-  try{(toKeys?$('ks-a'):$('settings').querySelector('.sheet')).focus({preventScroll:true});}catch(_){}
+  try{(toKeys?$('rb-a'):$('bgm-battle')).focus();}catch(_){}
 }
 function closeSettings(){$('settings').hidden=true;setOpen=false;setRebind(null);try{$('open-set').focus();}catch(_){}}
 $('open-set').onclick=()=>openSettings(false);
@@ -1860,7 +1856,7 @@ let ticker=null;
 try{ticker=new Worker(URL.createObjectURL(new Blob(['setInterval(()=>postMessage(0),33)'],{type:'text/javascript'})));ticker.onmessage=simTick;ticker.onerror=()=>{setInterval(simTick,33);};}
 catch(_){setInterval(simTick,33);}
 requestAnimationFrame(frame);
-window.__yk={newGame,step,radius,setMode,LEDGES,SONGS,parseSeq,MUS,applyTheme,get says(){return says},get G(){return G},get V(){return V},get scene(){return scene},get role(){return role},get me(){return me},get AC(){return AC}};
+window.__yk={newGame,step,radius,setMode,LEDGES,SONGS,parseSeq,MUS,applyTheme,get says(){return says},get G(){return G},get V(){return V},get scene(){return scene},get role(){return role},get me(){return me}};
 })();
 </script>
 </body>
