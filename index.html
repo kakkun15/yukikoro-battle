@@ -58,6 +58,9 @@ button[disabled]{opacity:.5;cursor:default}
 ul.members{list-style:none;margin:0;padding:0;display:grid;grid-template-columns:1fr 1fr;gap:4px 10px;font-size:14px}
 ul.members li{display:flex;align-items:center;gap:6px;min-width:0}
 ul.members li span.nm{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+ul.members.teams{font-size:13px;column-gap:8px}
+ul.members.teams li{border-left:4px solid transparent;padding-left:5px;gap:5px}
+ul.members li.th{color:#fff;justify-content:center;border:0;padding:1px 6px;letter-spacing:.08em;text-shadow:1px 1px 0 rgba(16,26,46,.45)}
 .sw{width:10px;height:10px;flex:none;box-shadow:0 0 0 2px var(--ink)}
 ol.result{margin:0;padding:0;list-style:none;font-size:15px;display:flex;flex-direction:column;gap:2px}
 ol.result li{display:flex;gap:8px;align-items:center}
@@ -285,7 +288,7 @@ button.ghost:hover{background:var(--night-2)}
       <summary>あそびかた</summary>
       <p><b>雪原モード</b>　雪玉は新しい雪の上を転がすほど大きくなる。通ったあとは雪が減るので、白いところを探して動く。先に100%まで育てた人の勝ち。3分30秒で時間切れ。</p>
       <p><b>坂道モード</b>　画面の上が坂の上。雪は下ほど深いので下で育てて、頂上の旗まで押し上げる。届けた大きさが自分の雪だるまに足されて、合計100%で勝ち。届けた分はもう減らない。4分で時間切れ。手を離した雪玉は坂を転がり落ちて、当たった人を気絶させる。丸太の柵の上では止まる。</p>
-      <p><b>チーム戦</b>　ロビーで「あり」にすると、赤と青の2対2か3対3。チームの合計が「人数×100%」（2対2なら200%、3対3なら300%）になったら勝ち。味方は自分と同じ扱いで、味方のパンチ・アイテム・転がる雪玉は当たらない。手ぶらで味方の雪玉のそばにいると、いっしょに押して速く進める。スポットライトは相手の人数分の光が出て、使った側のチームは雷に打たれない。代わりに光に先に入って、相手が入れないようにじゃまできる。</p>
+      <p><b>チーム戦</b>　ロビーで「あり」にすると、赤と青の2対2か3対3。チームの合計が「人数×100%」（2対2なら200%、3対3なら300%）になったら勝ち。味方は自分と同じ扱いで、味方のパンチ・アイテム・転がる雪玉は当たらない。手ぶらで味方の雪玉のそばにいると、いっしょに押して速く進める（味方のボットも手伝いに来る）。スポットライトは相手の人数分の光が出て、使った側のチームは雷に打たれない。代わりに光に先に入って、相手が入れないようにじゃまできる。</p>
       <p>気絶すると頭の上にバーが出る。長いほど長く動けない。ヘビやつららにねらわれると、頭の上に「手」のマークが出る。そのとき手のボタンを押せばよけられる。</p>
     </details>
     <details class="gsec" open>
@@ -344,7 +347,7 @@ const $=id=>document.getElementById(id);
 const W=384,H=216,FX0=8,FX1=376,FY0=68,FY1=208,CELL=4,GW=96,GY0=60,GH=39;
 const GOAL=100,MATCH=210,MATCH_S=240,STEP=1/30;
 const SPD_HOLD=46,SPD_FREE=72,TURN=7.5,GROW=0.031,REGEN=24,DIG_P=1/90,DIG_CD=20;
-const HOOK_R=120,HOOK_A=0.8,BLAST=28,SPOT_R=12,SNAP_MS=50,PFX='yukikoro-v3-';
+const HOOK_R=120,HOOK_A=0.8,BLAST=28,SPOT_R=12,SNAP_MS=50,PFX='yukikoro-v4-';
 const GOAL_Y=FY0+12,ROLL_ACC=95,ROLL_MAX=125,SPOT_CD=25,STUN_PX=4,GROW_S=1.0;
 const LEDGES=[{x0:40,x1:100,y:150},{x0:162,x1:222,y:120},{x0:284,x1:344,y:150}];
 const SKI=[{n:'なし'},{n:'少ない',a:26,b:36,k2:0.15},{n:'ふつう',a:13,b:21,k2:0.35},{n:'多い',a:6,b:10,k2:0.55}];
@@ -368,7 +371,7 @@ const radius=s=>3.5+0.145*s;
 const dist=(ax,ay,bx,by)=>Math.hypot(ax-bx,ay-by);
 
 // ---------------------------------------------------------------- simulation (host only)
-function newAI(){return{spSeenId:-1,spSeenT:0,wx:0,wy:0,wt:0,want:0,unstick:0,ux:0,uy:0,t:0,gx:0,gy:0,useT:-1,raid:0,raidT:-1,raidCd:rnd(6,14),sp:-1,spId:-1,rest:0,restCd:rnd(4,9)}}
+function newAI(){return{help:-1,hside:1,helpT:0,helpCd:rnd(2,5),hpx:0,hpy:0,hlost:0,hstill:0,hy:0,calm:false,spSeenId:-1,spSeenT:0,wx:0,wy:0,wt:0,want:0,unstick:0,ux:0,uy:0,t:0,gx:0,gy:0,useT:-1,raid:0,raidT:-1,raidCd:rnd(6,14),sp:-1,spId:-1,rest:0,restCd:rnd(4,9)}}
 function newGame(list,mode,ski,lv,team){
   if(ski==null)ski=2;if(lv==null)lv=1;
   const n=list.length,slope=mode===1;
@@ -519,15 +522,113 @@ function botThink(g,p,dt){
   botBrain(g,p,dt);
   p.mx*=L.sp;p.my*=L.sp;
   // watchdog: wanting to move but going nowhere -> step aside and pick a new goal
-  a.wt+=dt;if(Math.abs(p.mx)+Math.abs(p.my)>0.1)a.want+=dt;
+  // (a helper that is already in place only makes small corrections, so that does not count as stuck)
+  a.wt+=dt;if(!a.calm&&Math.abs(p.mx)+Math.abs(p.my)>0.1)a.want+=dt;
   if(a.wt>=1.2){
     if(a.want>1&&p.stun<=0&&Math.hypot(p.x-a.wx,p.y-a.wy)<3){const an=Math.random()*6.283;a.ux=Math.cos(an);a.uy=Math.sin(an);a.unstick=0.5;a.t=0;}
     a.wt=0;a.want=0;a.wx=p.x;a.wy=p.y;
   }
 }
+// ---- team match: bots help a teammate push their snowball
+// 雪原: only once your own ball is full (it cannot grow any more, so helping is pure gain).
+// 坂道: only while your own ball is tiny (e.g. right after delivering) and a teammate is hauling uphill the ball that
+//       wins the match (or time is nearly up). Otherwise walking up together costs the team more than it saves.
+// One helper per ball. The helper stands at the back corner of the ball, next to the pusher, and follows it.
+let HELP_ON=[true,true];   // per team; tests switch one side off to compare
+const HELP_CD=4;
+function climbing(o){return o.bot?!!o.ai.climb:o.my<-0.3;}
+function helpOk(g,p,o,start){
+  if(!o||o===p||o.team!==p.team||!o.hold||o.stun>0)return false;
+  if(g.mode===1){
+    if(p.size>=5||o.size<(start?18:1))return false;
+    if(start){
+      if(o.by<GOAL_Y+45||!climbing(o)||dist(p.x,p.y,o.x,o.y)>130)return false;
+      // pushing together is slower for the team overall, so only when this ball decides the match:
+      // it wins the match once delivered, or time is nearly up
+      const need=tGoal(g.players.length)-g.tsc[p.team];
+      if(!(o.size>=need-0.5||(g.tl<30&&o.size>=10)))return false;
+    }
+  }else{
+    if(p.size<GOAL-(start?0.5:6)||o.size>=GOAL-0.5)return false;
+    if(start&&dist(p.x,p.y,o.x,o.y)>100)return false;   // a full ball still wipes snow away from rivals, so only stop that for a teammate nearby
+  }
+  for(const q of g.players)if(q!==p&&q.team===p.team&&!q.hold&&(q.bot?q.ai.help===o.id:dist(q.x,q.y,o.bx,o.by)<radius(o.size)+10))return false;   // already has a helper
+  return true;
+}
+function helpPick(g,p){
+  let best=null,bd=1e9;
+  for(const o of g.players)if(helpOk(g,p,o,true)){const d=dist(p.x,p.y,o.x,o.y);if(d<bd){bd=d;best=o;}}
+  return best;
+}
+function helpSpot(o,s){const r=radius(o.size),an=o.ang+Math.PI+s*1.3;return{x:o.bx+Math.cos(an)*(r+4.5),y:o.by+Math.sin(an)*(r+4.5)};}
+function inField(q){return q.x>FX0+1&&q.x<FX1-1&&q.y>FY0+1&&q.y<FY1-1;}
+function helpEnd(a){a.help=-1;a.helpCd=HELP_CD;a.calm=false;}
+function botHelp(g,p,dt){
+  const a=p.ai,o=g.players[a.help];
+  a.calm=false;
+  // keep going through short hiccups (the pusher re-grabbing their ball), give up on anything longer
+  if(!helpOk(g,p,o,false)){a.hlost+=dt;if(a.hlost>1.2||!o||o.stun>0||(g.mode===1&&o.size<1)){helpEnd(a);return false;}moveTo(p,o?o.x:p.x,o?o.y:p.y,14);p.noGrab=true;return true;}
+  a.hlost=0;a.helpT+=dt;
+  a.hfar=o.help?0:(a.hfar||0)+dt;if(a.hfar>8){helpEnd(a);a.hfar=0;return false;}   // insurance: never chase a pusher forever
+  // 坂道: stop if the pusher is not actually going up for a while
+  if(g.mode===1){if(o.y<a.hy-4){a.hy=o.y;a.hstill=0;}else{a.hstill+=dt;if(o.y>a.hy)a.hy=o.y;}if(a.hstill>3.5||a.helpT>35){helpEnd(a);return false;}}
+  p.noGrab=true;
+  const r=radius(o.size),bd=dist(p.x,p.y,o.bx,o.by);
+  // where to stand: a back corner of the ball (our side first). Near a wall or in a corner that spot can be off the
+  // field, so fall back to a spot behind / beside the pusher. Never a spot inside the ball or on top of the pusher,
+  // because standing there would shove their ball around.
+  const okSpot=c=>inField(c)&&dist(c.x,c.y,o.bx,o.by)>=r+4&&dist(c.x,c.y,o.x,o.y)>=8;
+  const back=o.ang+Math.PI;
+  // while still walking over, switch to the other back corner when it is clearly nearer (the pusher may have turned)
+  if(!a.calm){const s1=helpSpot(o,a.hside),s2=helpSpot(o,-a.hside);if(okSpot(s2)&&dist(p.x,p.y,s2.x,s2.y)+6<dist(p.x,p.y,s1.x,s1.y))a.hside=-a.hside;}
+  let q=null;
+  for(const c of[[helpSpot(o,a.hside),0],[helpSpot(o,-a.hside),1],[{x:o.x+Math.cos(back)*10,y:o.y+Math.sin(back)*10},0],
+    [{x:o.x+Math.cos(back+a.hside*1.6)*10,y:o.y+Math.sin(back+a.hside*1.6)*10},0],[{x:o.x+Math.cos(back-a.hside*1.6)*10,y:o.y+Math.sin(back-a.hside*1.6)*10},0]])
+    if(okSpot(c[0])){q=c[0];if(c[1])a.hside=-a.hside;break;}
+  if(!q){   // boxed in (deep in a corner): just stand clear of the ball and wait
+    const an=Math.atan2(p.y-o.by,p.x-o.bx),cx=clamp(o.bx+Math.cos(an)*(r+5),FX0,FX1),cy=clamp(o.by+Math.sin(an)*(r+5),FY0,FY1);
+    if(bd<r+4){moveTo(p,cx,cy,0.5);}else{a.calm=true;if(dist(p.x,p.y,o.x,o.y)>40)moveTo(p,o.x,o.y,12);}
+    a.hpx=o.x;a.hpy=o.y;return true;}
+  // coming from the front: walk around the side first instead of shoving the ball back into the pusher
+  const rel=Math.abs(angDiff(Math.atan2(p.y-o.by,p.x-o.bx),o.ang+Math.PI));
+  if(rel>1.7&&bd<r+26){const an=o.ang-a.hside*Math.PI/2;   // same side as the corner we are heading for
+   moveTo(p,clamp(o.bx+Math.cos(an)*(r+12),FX0,FX1),clamp(o.by+Math.sin(an)*(r+12),FY0,FY1),1);a.hpx=o.x;a.hpy=o.y;return true;}
+  const d=dist(p.x,p.y,q.x,q.y);
+  if(d>18){moveTo(p,q.x,q.y,0);a.hpx=o.x;a.hpy=o.y;return true;}
+  // close: follow the pusher's speed and steer the remaining gap smoothly (no overshoot, no jitter)
+  const L=BOTLV[g.lv|0]||BOTLV[1],k=SPD_FREE*L.sp,vx=dt>0?(o.x-a.hpx)/dt:0,vy=dt>0?(o.y-a.hpy)/dt:0;a.hpx=o.x;a.hpy=o.y;
+  let mx=vx/k+(q.x-p.x)/6,my=vy/k+(q.y-p.y)/6;const l=Math.hypot(mx,my);if(l>1){mx/=l;my/=l;}
+  if(l<0.15){mx=my=0;}
+  p.mx=mx/L.sp;p.my=my/L.sp;   // botThink scales by L.sp afterwards
+  if(Math.hypot(p.mx,p.my)>1){const m=Math.hypot(p.mx,p.my);p.mx/=m;p.my/=m;}
+  a.calm=d<6;
+  if(a.calm&&l<0.15)p.ang=Math.atan2(o.by-p.y,o.bx-p.x);
+  // bodyguard: punch a rival who comes right up to us
+  if(p.pCd<=0)for(const e of g.players)if(!ally(e,p)&&e.stun<=0&&e.inv<=0&&dist(e.x,e.y,p.x,p.y)<12&&Math.random()<dt*4){p.ang=Math.atan2(e.y-p.y,e.x-p.x);p.mx=p.my=0;p.pa=1;break;}
+  return true;
+}
+function botItem(g,p,L){
+  const a=p.ai,ps=g.players;
+  if(!p.item){a.useT=-1;return;}
+  if(a.useT<0)a.useT=g.t+rnd(L.use[0],L.use[1]);
+  if(g.t<a.useT)return;
+  const it=p.item;let ok=false,hint=null;
+  if(it==='ski'||it==='toy'||it==='ice')ok=true;
+  else if(it==='spot')ok=!g.spot;
+  else if(it==='hook'){
+    let bd=100;for(const o of ps)if(!ally(o,p)&&o.stun<=0){const d=dist(o.x,o.y,p.x,p.y);if(d<bd&&(g.team||o.rank<p.rank||g.t>a.useT+6)){bd=d;hint=o;}}
+    ok=!!hint;
+  }else if(it==='bomb'){
+    const th=(p.hold?2*radius(p.size)+5:0)+30;
+    for(const o of ps)if(!ally(o,p)){const d=dist(o.bx,o.by,p.x,p.y);if(Math.abs(d-th)<14){hint={x:o.bx,y:o.by};ok=true;break;}}
+    if(!ok&&g.t>a.useT+12){ok=true;hint=null;}
+  }
+  if(ok){useItem(g,p,hint);a.useT=-1;}
+}
 function botBrain(g,p,dt){
   const a=p.ai;a.t-=dt;p.mx=p.my=0;
   if(p.stun>0)return;
+  p.noGrab=false;a.calm=false;a.helpCd-=dt;
   const sp=g.spot,ps=g.players,slope=g.mode===1,L=BOTLV[g.lv|0]||BOTLV[1];
   if(sp&&!sp.s0.includes(p.id)&&botSees(g,p,sp)){
     if(p.hold){p.pa=1;return;}
@@ -565,6 +666,7 @@ function botBrain(g,p,dt){
     for(const t of g.toys)if(t.tg===p.id&&dist(t.x,t.y,p.x,p.y)<17){
       p.ang=Math.atan2(t.y-p.y,t.x-p.x);if(p.pCd<=0)p.pa=1;moveTo(p,t.x,t.y,6);return;
     }
+    if(a.help>=0){if(botHelp(g,p,dt)){if(p.item!=='hook')botItem(g,p,BOTLV[g.lv|0]||BOTLV[1]);return;}}
     if(a.raid>0){
       a.raid-=dt;const o=ps[a.raidT];
       if(!o||o.stun>0||o.inv>0)a.raid=0;
@@ -583,23 +685,16 @@ function botBrain(g,p,dt){
     let top=null;for(const o of ps)if(!ally(o,p)&&(!top||o.rank<top.rank))top=o;const parkOk=!slope||p.size<8||p.by>FY1-12||!!ledgeAt(p.bx,p.by);
     if(parkOk&&top&&(g.team||top.rank===0)&&top.stun<=0&&dist(top.x,top.y,p.x,p.y)<95&&Math.random()<L.raid){a.raid=3.5;a.raidT=top.id;p.pa=1;return;}
   }
-  if(p.item){
-    if(a.useT<0)a.useT=g.t+rnd(L.use[0],L.use[1]);
-    if(g.t>=a.useT){
-      const it=p.item;let ok=false,hint=null;
-      if(it==='ski'||it==='toy'||it==='ice')ok=true;
-      else if(it==='spot')ok=!g.spot;
-      else if(it==='hook'){
-        let bd=100;for(const o of ps)if(!ally(o,p)&&o.stun<=0){const d=dist(o.x,o.y,p.x,p.y);if(d<bd&&(g.team||o.rank<p.rank||g.t>a.useT+6)){bd=d;hint=o;}}
-        ok=!!hint;
-      }else if(it==='bomb'){
-        const th=2*radius(p.size)+35;
-        for(const o of ps)if(!ally(o,p)){const d=dist(o.bx,o.by,p.x,p.y);if(Math.abs(d-th)<14){hint={x:o.bx,y:o.by};ok=true;break;}}
-        if(!ok&&g.t>a.useT+12){ok=true;hint=null;}
-      }
-      if(ok){useItem(g,p,hint);a.useT=-1;}
-    }
-  }else a.useT=-1;
+  if(a.help>=0){if(helpOk(g,p,ps[a.help],false)){p.pa=1;return;}helpEnd(a);}
+  botItem(g,p,L);
+  if(g.team&&HELP_ON[p.team]&&a.helpCd<=0&&a.help<0){
+    const o=helpPick(g,p);
+    if(o){a.help=o.id;a.hside=0;a.helpT=0;a.hlost=0;a.hstill=0;a.hy=o.y;a.hpx=o.x;a.hpy=o.y;a.raid=0;
+      // take the back corner nearest to us
+      const s1=helpSpot(o,1),s2=helpSpot(o,-1);a.hside=(inField(s1)?dist(p.x,p.y,s1.x,s1.y):1e9)<=(inField(s2)?dist(p.x,p.y,s2.x,s2.y):1e9)?1:-1;
+      p.pa=1;return;}
+    a.helpCd=0.5;   // nobody to help right now; look again shortly
+  }
   a.restCd-=dt;
   if(a.rest>0){a.rest-=dt;return;}
   if(a.restCd<=0){a.restCd=rnd(L.rest[0],L.rest[1]);a.rest=rnd(L.restL[0],L.restL[1]);if(a.rest>0)return;}
@@ -697,7 +792,7 @@ function step(g,dt){
       }
     }else{
       const dx=p.bx-p.x,dy=p.by-p.y,dd=Math.hypot(dx,dy);
-      if(p.relT>0.35&&dd<r+6&&(dd<3||(moving&&(mx*dx+my*dy)>0.3*dd))){p.hold=true;p.parked=false;p.bvx=p.bvy=0;p.ang=Math.atan2(dy,dx);p.x=p.bx-Math.cos(p.ang)*(r+5);p.y=p.by-Math.sin(p.ang)*(r+5);clampP(p);}
+      if(p.relT>0.35&&!p.noGrab&&dd<r+6&&(dd<3||(moving&&(mx*dx+my*dy)>0.3*dd))){p.hold=true;p.parked=false;p.bvx=p.bvy=0;p.ang=Math.atan2(dy,dx);p.x=p.bx-Math.cos(p.ang)*(r+5);p.y=p.by-Math.sin(p.ang)*(r+5);clampP(p);}
     }
     if(p.pa>0){p.pa=0;if(p.hold)dropBall(g,p);else if(p.pCd<=0)punch(g,p);}
     if(p.pb>0){p.pb=0;useItem(g,p,null);}
@@ -788,6 +883,12 @@ function step(g,dt){
     }
   }
   collide(g);
+  // who is helping push (only for drawing their hands on the ball)
+  for(const q of ps){
+    q.pushA=null;
+    if(!g.team||q.hold||q.stun>0)continue;
+    for(const o of ps)if(o!==q&&o.team===q.team&&o.hold&&o.stun<=0&&(dist(q.x,q.y,o.x,o.y)<13||dist(q.x,q.y,o.bx,o.by)<radius(o.size)+7)){q.pushA=Math.atan2(o.by-q.y,o.bx-q.x);break;}
+  }
   const key=slope?(p=>p.score+p.size*0.5):(p=>p.size);
   let order=ps.slice().sort((a,b)=>key(b)-key(a)||a.id-b.id);
   let done=slope?ps.some(p=>p.score>=GOAL-0.001):order[0].size>=GOAL,tsz=[0,0];
@@ -994,6 +1095,8 @@ function wantSong(){
 }
 function musUpdate(){
   if(!AC||!MUS.gain)return;
+  // watchdog: while the page is in the background, keep everything stopped even if something woke it up again
+  if(document.hidden){bgPaused=true;try{if(AC.state==='running')AC.suspend();}catch(_){}try{if(keepAlive&&!keepAlive.paused)keepAlive.pause();}catch(_){}return;}
   MUS.gain.gain.setTargetAtTime(muted?0:0.9,AC.currentTime,0.05);
   const w=wantSong();if(w!==MUS.id)musPlay(w);
   musTick();
@@ -1241,8 +1344,9 @@ function drawPlayer(p,t){
   const mood=V&&V.ph==='end'&&role!=='demo'?(won(p)?'happy':'sad'):null;
   const x=Math.round(p.x),y=Math.round(p.y)-(mood==='happy'?Math.round(Math.abs(Math.sin(t*9))*3):0);
   if(p.inv&&!p.stun&&Math.floor(t*12)%2)return;
+  if(p.team>=0&&V.team&&V.startT>0&&role!=='demo'){const tc=TCOL[p.team];for(let k=0;k<28;k++){const an=k/28*6.283;R(x+Math.cos(an)*11,y-4+Math.sin(an)*9,2,2,tc.m);}}   // countdown: team ring
   if(p.team>=0){R(x-4,y,9,1,TCOL[p.team].m);R(x-3,y+1,7,1,TCOL[p.team].d);}else R(x-3,y,7,1,'rgba(100,128,172,.4)');
-  const ax=Math.cos(p.ang),ay=Math.sin(p.ang);
+  const pushing=!p.hold&&p.pushA!=null,fa=pushing?p.pushA:p.ang,ax=Math.cos(fa),ay=Math.sin(fa);
   const f=mood?'d':Math.abs(ay)>Math.abs(ax)*1.2?(ay<0?'u':'d'):(ax<0?'l':'r');
   const lg=LEGS[Math.floor(p.walk/4)%4];
   if(p.stun>0){
@@ -1254,7 +1358,7 @@ function drawPlayer(p,t){
   if(p.boost>0){R(x-5,y,4,1,'#d9534f');R(x+1,y,5,1,'#d9534f');}
   for(let j=0;j<11;j++){let row=BODY[j];if(row==='F')row=FACE[f];else if(row==='M')row=MOUTH[mood||'n'];else if(row==='L1')row=mood?LEGS[0][0]:lg[0];else if(row==='L2')row=mood?LEGS[0][1]:lg[1];
     for(let i=0;i<8;i++){const ch=row[i];if(ch!=='.')R(x-4+i,y-11+j,1,1,pal[ch]);}}
-  if(p.hold){R(x+ax*4-1,y-5+ay*2,2,2,col.m);R(x+ax*5+ay*2-1,y-5+ay*3,2,2,col.m);}
+  if(p.hold||pushing){R(x+ax*4-1,y-5+ay*2,2,2,col.m);R(x+ax*5+ay*2-1,y-5+ay*3,2,2,col.m);}
   if(p.pT>0){R(x+ax*7-1,y-6+ay*6,3,3,col.m);R(x+ax*4-1,y-5+ay*4,2,2,col.d);}
 }
 function drawToy(t,time){
@@ -1323,7 +1427,8 @@ function draw(time){
       const w0=Math.max(2,Math.round(Math.max(p.stun0,p.stun)*STUN_PX)),w=clamp(Math.round(p.stun*STUN_PX),1,w0),x0=Math.round(p.x-w0/2);
       R(x0-1,p.y-17,w0+2,4,'#22304a');R(x0,p.y-16,w0,2,'#f3f7fb');R(x0,p.y-16,w,2,'#f08a3c');
     }
-    if(role!=='demo'){const ny=p.stun>0?p.y-19:p.item?p.y-25:p.y-14;T((p.id===me?'▼':'')+p.name,p.x,ny,6,p.team>=0?TCOL[p.team].d:p.id===me?COL[p.color].d:'#3c4d6e','center','#ffffff');if(says[p.id])bubbleQ.push([says[p.id].txt,p.x,ny-8,COL[p.color].d]);}
+    if(role!=='demo'){const ny=p.stun>0?p.y-19:p.item?p.y-25:p.y-14;
+      T((p.id===me?'▼':'')+p.name,p.x,ny,6,p.team>=0?TCOL[p.team].d:p.id===me?COL[p.color].d:'#3c4d6e','center','#ffffff');if(says[p.id])bubbleQ.push([says[p.id].txt,p.x,ny-8,COL[p.color].d]);}
   }
   // spotlight darkness
   if(spot){
@@ -1442,7 +1547,15 @@ function drawHud(time){
     else if(hintNow)T(hintNow==='ice'?'つららが来る！ '+ka+' で手をはなせば気絶しない':my.hold?'ヘビが来る！ '+ka+' で手をはなして、もう一度 '+ka+' でパンチ':'ヘビが来る！ '+ka+' でパンチしてこわせ',W/2,H-6,7,'#a5302f','center','#ffffff');
     else if(!my.hold&&!my.stun&&V.ph==='play'&&V.startT<=0)T((isTouch?'手ボタン':keyName(KEYS.a[0]))+' でパンチ ／ 雪玉に向かって歩くと持つ',W/2,H-6,6,'#22304a','center','#ffffff');
   }
-  if(V.startT>0)T(String(Math.ceil(V.startT)),W/2,118,40,'#22304a','center','#ffffff');
+  if(V.startT>0){
+    T(String(Math.ceil(V.startT)),W/2,118,40,'#22304a','center','#ffffff');
+    if(V.team&&my){
+      const col=TCOL[my.team],mates=P.filter(p=>p.team===my.team&&p!==my).map(p=>p.name).join('・');
+      R(W/2-62,24,124,15,col.d);R(W/2-61,25,122,13,col.m);
+      T('あなたは '+TEAMN[my.team],W/2,35,10,'#ffffff','center',col.d);
+      if(mates)T('味方：'+mates,W/2,50,7,col.d,'center','#ffffff');
+    }
+  }
   if(V.spot){
     const sp=V.spot,mine=sp.by===me,cas=P[sp.by],safe=!mine&&sp.s0.includes(me);
     T(String(Math.max(1,Math.ceil(sp.t))),W/2,52,26,'#f4b860','center','#101a2e');
@@ -1468,12 +1581,12 @@ function resize(){
 // ---------------------------------------------------------------- client view
 function makeView(list,mode,team){
   return{mode:mode===1?1:0,team:!!team,wteam:-1,tl:mode===1?MATCH_S:MATCH,ph:'play',win:-1,startT:3,toys:[],bombs:[],skiers:[],ices:[],spot:null,snow:new Float32Array(GW*GH).fill(1),
-    players:list.map((r,i)=>({id:i,name:r.name,color:r.color,team:team&&r.team>=0?r.team:-1,x:0,y:0,ang:0,hold:true,bx:0,by:0,size:0,score:0,stun:0,stun0:0,inv:0,item:null,cd:0,boost:0,pT:0,rank:i,walk:0,broll:0}))};
+    players:list.map((r,i)=>({id:i,name:r.name,color:r.color,team:team&&r.team>=0?r.team:-1,x:0,y:0,ang:0,hold:true,bx:0,by:0,size:0,score:0,stun:0,stun0:0,inv:0,item:null,cd:0,boost:0,pT:0,rank:i,walk:0,broll:0,pushA:null}))};
 }
 const r1=v=>Math.round(v*10)/10,r2=v=>Math.round(v*100)/100;
 function packSnap(g){
   return{t:'s',tl:r1(g.tl),ph:g.ph,win:g.win,wt:g.wteam,st:r2(Math.max(0,g.startT)),
-    P:g.players.map(p=>[r1(p.x),r1(p.y),r2(p.ang),p.hold?1:0,r1(p.bx),r1(p.by),r1(p.size),r2(p.stun),p.inv>0?1:0,p.item,r1(p.cd),r2(p.boost),r2(p.pT),p.rank,Math.round(p.walk),r2(p.stun0),r1(p.score),Math.round(p.broll)]),
+    P:g.players.map(p=>[r1(p.x),r1(p.y),r2(p.ang),p.hold?1:0,r1(p.bx),r1(p.by),r1(p.size),r2(p.stun),p.inv>0?1:0,p.item,r1(p.cd),r2(p.boost),r2(p.pT),p.rank,Math.round(p.walk),r2(p.stun0),r1(p.score),Math.round(p.broll),p.pushA==null?null:r2(p.pushA)]),
     T:g.toys.map(t=>[r1(t.x),r1(t.y),t.k,t.tg]),
     B:g.bombs.map(b=>[r1(b.x),r1(b.y),r2(b.fuse),r2(b.ft),r1(b.sx),r1(b.sy)]),
     S:g.skiers.map(s=>[r1(s.x),r1(s.y),r1(s.vx),r1(s.vy),r2(s.warn),s.c]),
@@ -1488,7 +1601,7 @@ function buildView(now){
     const c1=s.P[i],c0=o.P[i]||c1;if(!c1)return;
     p.x=lerp(c0[0],c1[0],a);p.y=lerp(c0[1],c1[1],a);p.ang=c0[2]+angDiff(c1[2],c0[2])*a;p.hold=!!c1[3];
     p.bx=lerp(c0[4],c1[4],a);p.by=lerp(c0[5],c1[5],a);p.size=lerp(c0[6],c1[6],a);
-    p.stun=c1[7];p.inv=c1[8];p.item=c1[9];p.cd=c1[10];p.boost=c1[11];p.pT=c1[12];p.rank=c1[13];p.walk=lerp(c0[14],c1[14],a);p.stun0=c1[15];p.score=c1[16];p.broll=lerp(c0[17],c1[17],a);
+    p.stun=c1[7];p.inv=c1[8];p.item=c1[9];p.cd=c1[10];p.boost=c1[11];p.pT=c1[12];p.rank=c1[13];p.walk=lerp(c0[14],c1[14],a);p.stun0=c1[15];p.score=c1[16];p.broll=lerp(c0[17],c1[17],a);p.pushA=c1[18]==null?null:c1[18];
   });
   const same=o.T.length===s.T.length;
   V.toys=s.T.map((t,i)=>({x:same?lerp(o.T[i][0],t[0],a):t[0],y:same?lerp(o.T[i][1],t[1],a):t[1],k:t[2],tg:t[3]}));
@@ -1587,10 +1700,14 @@ function setMode(m){
 }
 function renderLobby(list,you,host){
   const ul=$('members');ul.textContent='';
+  const teams=list.some(r=>r.team>=0);ul.classList.toggle('teams',teams);
+  // team match: red team in the left column, blue team in the right (the list already alternates red, blue, red, ...)
+  if(teams)for(const t of[0,1]){const li=document.createElement('li');li.className='th';li.style.background=TCOL[t].m;li.textContent=TEAMN[t];ul.append(li);}
   list.forEach((r,i)=>{
     const li=document.createElement('li'),sw=document.createElement('span'),nm=document.createElement('span');
     sw.className='sw';sw.style.background=COL[r.color].m;nm.className='nm';
-    nm.textContent=(r.team>=0?(r.team?'青 ':'赤 '):'')+r.name+(r.bot?'（ボット）':i===you?'（あなた）':i===0?'（ホスト）':'');
+    if(teams)li.style.borderColor=TCOL[r.team].m;
+    nm.textContent=r.name+(r.bot?'（ボット）':i===you?'（あなた）':i===0?'（ホスト）':'');
     li.append(sw,nm);ul.append(li);
   });
   $('codebox').hidden=!roomCode;$('lobbytitle').hidden=!!roomCode;
@@ -1911,7 +2028,7 @@ let ticker=null;
 try{ticker=new Worker(URL.createObjectURL(new Blob(['setInterval(()=>postMessage(0),33)'],{type:'text/javascript'})));ticker.onmessage=simTick;ticker.onerror=()=>{setInterval(simTick,33);};}
 catch(_){setInterval(simTick,33);}
 requestAnimationFrame(frame);
-window.__yk={newGame,step,radius,setMode,LEDGES,SONGS,parseSeq,MUS,applyTheme,get says(){return says},get G(){return G},get V(){return V},get scene(){return scene},get role(){return role},get me(){return me},get AC(){return AC},get keepAlive(){return keepAlive},get acFails(){return acFails}};
+window.__yk={setHelp(x,y){HELP_ON=[x,y];},newGame,step,radius,setMode,LEDGES,SONGS,parseSeq,MUS,applyTheme,get says(){return says},get G(){return G},get V(){return V},get scene(){return scene},get role(){return role},get me(){return me},get AC(){return AC},get keepAlive(){return keepAlive},get acFails(){return acFails}};
 })();
 </script>
 </body>
