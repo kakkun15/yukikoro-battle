@@ -300,9 +300,10 @@ button.ghost:hover{background:var(--night-2)}
     <details class="gsec">
       <summary>音楽について</summary>
       <p>BGMは音声ファイルを使っていない。ページの中のプログラムが、ファミコンと同じ4種類の音（矩形波2つ・三角波・ノイズ）をその場で鳴らしている。</p>
-      <p>曲の音符はAI（AnthropicのClaude）が、著作権の切れた原曲の旋律を思い出してプログラムに直接書いたもの。伴奏・ベース・ドラムも新しく書いた。既存のMIDI・楽譜・録音は写していない。作者（kakkun15）が確認して公開している。</p>
+      <p>曲の音符はAI（AnthropicのClaude）が、著作権の切れた原曲の旋律を思い出してプログラムに直接書いたもの。伴奏・ベース・ドラムも新しく書いた。既存のMIDI・録音は写していない。楽譜は「そりすべり」だけ、権利の切れた1881年の版を見て写した。作者（kakkun15）が確認して公開している。</p>
       <dl class="credits">
         <dt>怒りの日</dt><dd>ヴェルディ「レクイエム」（1874年初演、1901年没）。旋律は原曲に忠実ではない編曲。</dd>
+        <dt>そりすべり（モーツァルト）</dt><dd>「3つのドイツ舞曲」K.605の3曲目のトリオ（1791年、1791年没）。旋律・低音・鈴の音は1881年出版の楽譜から写した。</dd>
         <dt>ジングルベル</dt><dd>ジェームズ・ピアポント（1857年出版、1893年没）</dd>
         <dt>きよしこの夜</dt><dd>フランツ・グルーバー（1818年初演、1863年没）。日本語の歌詞は使っていない。</dd>
         <dt>雪合戦マーチ・ふぶきの坂道・雪の宿</dt><dd>このゲームのためのオリジナル曲</dd>
@@ -972,6 +973,16 @@ const SONGS={};
   const sch='C C C C G G C C F F C C F F C C G G C C C G C C'.split(' ');
   SONGS.silent={n:'きよしこの夜',bpm:84,battle:0,d1:0.25,d2:0.125,v:[0.08,0.04,0.12,0],
     p1:sm,p2:chordBars(sch,12,[0,1,2,1,2,1],2,4),tri:bassBars(sch,['r:6','f:6']),noi:'R:'+(24*12)};
+  // Die Schlittenfahrt (W. A. Mozart, 3 German Dances K.605 No.3, Trio, 1791)
+  // melody, bass and bell pitches read from the 1881 Breitkopf & Haertel score (Mozarts Werke, Serie XI No.13; IMSLP #24315)
+  const zA='F5:8 A5:2 F5:2 E5:4 G5:4 Bb5:4 Bb5:8 G5:2 E5:2 F5:4 A5:4 C6:4 C6:8 A5:2 F5:2 E5:4 G5:4 Bb5:4 Bb5:8 G5:2 E5:2 F5:4 R:8';
+  const zB='F5:8 Bb5:2 D6:2 C6:4 A5:4 F5:4 F5:8 Bb5:2 D6:2 C6:4 A5:4 F5:4 E5:8 G5:2 E5:2 F5:4 A5:4 C6:4 Bb5:8 G5:2 E5:2 F5:4 R:8';
+  const bell=ns=>ns.split(' ').map(n=>rep_(n+':2 R:2',3)).join(' ');   // sleigh bells on every beat (top bell of each bar, an octave up)
+  const zbA=bell('F6 E6 G6 A6 A6 G6 G6 A6'),zbB=bell('F6 A6 F6 A6 G6 A6 G6 A6');
+  const zlA='F3:4 R:8 C3:4 R:8 C3:4 R:8 F3:4 R:8 F3:4 R:8 C3:4 R:8 C3:4 R:8 F3:4 C3:4 F2:4';
+  const zlB='F3:4 R:8 F3:4 R:8 F3:4 R:8 F3:4 R:8 C3:4 R:8 F3:4 R:8 C3:4 R:8 F3:4 C3:4 F2:4';
+  SONGS.sleigh={n:'そりすべり（モーツァルト）',bpm:168,battle:1,d1:0.25,d2:0.125,v:[0.10,0.035,0.16,0.05],
+    p1:[zA,zA,zB,zB].join(' '),p2:[zbA,zbA,zbB,zbB].join(' '),tri:[zlA,zlA,zlB,zlB].join(' '),noi:rep_('h:4',96)};
   // Dies irae (G. Verdi, Requiem, 1874) - arranged
   SONGS.dies=DIES();
 })();
@@ -993,7 +1004,7 @@ function DIES(){
   const noi=rep_('C:2 R:3 B:1 R:2 C:2 R:3 B:1 R:2',4)+' '+rep_('B:2 H:2 S:2 H:2 B:2 H:2 S:2 S:2',8)+' '+rep_('C:2 R:3 B:1 R:2 C:2 R:3 B:1 R:2',2)+' '+rep_('B:2 H:2 S:2 H:2 B:2 H:2 S:2 S:2',2);
   return{n:'怒りの日（ヴェルディ）',bpm:160,battle:1,d1:0.5,d2:0.25,v:[0.10,0.05,0.17,0.10],p1,p2,tri,noi};
 }
-const SONG_ORDER=['dies','jingle','march','fubuki','yado','silent'];
+const SONG_ORDER=['dies','jingle','sleigh','march','fubuki','yado','silent'];
 function parseSeq(str){const out=[];let len=4;for(const t of String(str).trim().split(/\s+/)){if(!t)continue;const i=t.indexOf(':');const n=i<0?t:t.slice(0,i);if(i>=0)len=+t.slice(i+1);out.push([n,len]);}return out;}
 const NOTE_I={C:0,D:2,E:4,F:5,G:7,A:9,B:11};
 function nfreq(n){const m=/^([A-G])([#b]?)(-?\d)$/.exec(n);if(!m)return 0;const k=NOTE_I[m[1]]+(m[2]==='#'?1:m[2]==='b'?-1:0)+(+m[3]+1)*12;return 440*Math.pow(2,(k-69)/12);}
