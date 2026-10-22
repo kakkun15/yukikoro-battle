@@ -4,7 +4,11 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <title>ゆきころバトル</title>
+<meta name="description" content="雪玉を転がして育て、アイテムで妨害し合う2〜6人用のブラウザゲーム">
+<meta name="theme-color" content="#15223a">
 <link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="preconnect" href="https://unpkg.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=DotGothic16&display=swap">
 <style>
 /* layout: one framed game window glowing on a night-blue ground; the rule sheet sits below it like a notice board */
@@ -180,8 +184,8 @@ button.ghost:hover{background:var(--night-2)}
   .stage canvas{aspect-ratio:16/9;height:auto}
   .card{width:100%}
 }
+body{margin:0}[hidden]{display:none!important}*{box-sizing:border-box}
 </style>
-<style>body{margin:0}[hidden]{display:none!important}*{box-sizing:border-box}</style>
 </head>
 <body>
 <div class="wrap">
@@ -340,7 +344,7 @@ button.ghost:hover{background:var(--night-2)}
   </div>
 </div>
 
-<script src="https://unpkg.com/peerjs@1.5.5/dist/peerjs.min.js"></script>
+<script defer src="https://unpkg.com/peerjs@1.5.5/dist/peerjs.min.js"></script>
 <script>
 (()=>{'use strict';
 const $=id=>document.getElementById(id);
